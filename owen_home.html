@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Our Family History</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #f5f0e8;
+  --bg-card: #faf7f2;
+  --accent: #8b6914;
+  --accent-light: #c4a44a;
+  --text: #2c2418;
+  --text-muted: #6b5d4d;
+  --border: #d9cdb8;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'DM Sans', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 2rem 1rem;
+}
+
+.container {
+  max-width: 1200px;
+  width: 100%;
+}
+
+/* Header */
+.header {
+  text-align: center;
+  margin-bottom: 3rem;
+  padding: 2rem 1rem;
+  background: linear-gradient(135deg, #2c2418 0%, #3d3224 50%, #2c2418 100%);
+  border-radius: 12px;
+  color: #f5f0e8;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+.header h1 {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 3.5rem;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+  letter-spacing: 0.02em;
+}
+
+.header p {
+  font-size: 1.25rem;
+  font-weight: 300;
+  opacity: 0.9;
+  margin-top: 0.5rem;
+}
+
+/* Welcome Message */
+.welcome {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 2rem;
+  margin-bottom: 3rem;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+}
+
+.welcome h2 {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 2rem;
+  color: var(--accent);
+  margin-bottom: 1rem;
+}
+
+.welcome p {
+  font-size: 1.1rem;
+  line-height: 1.8;
+  color: var(--text-muted);
+}
+
+/* Navigation Grid */
+.nav-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 1.5rem;
+  margin-bottom: 3rem;
+}
+
+.nav-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 2rem;
+  text-decoration: none;
+  color: var(--text);
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+  display: flex;
+  flex-direction: column;
+}
+
+.nav-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 24px rgba(139,105,20,0.15);
+  border-color: var(--accent-light);
+}
+
+.nav-card-icon {
+  font-size: 2.5rem;
+  margin-bottom: 1rem;
+}
+
+.nav-card h3 {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 1.5rem;
+  color: var(--accent);
+  margin-bottom: 0.5rem;
+}
+
+.nav-card p {
+  font-size: 0.95rem;
+  color: var(--text-muted);
+  line-height: 1.6;
+  flex-grow: 1;
+}
+
+.nav-card-arrow {
+  margin-top: 1rem;
+  color: var(--accent-light);
+  font-size: 1.2rem;
+}
+
+/* Footer */
+.footer {
+  text-align: center;
+  padding: 2rem 1rem;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  border-top: 1px solid var(--border);
+  margin-top: 3rem;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .header h1 {
+    font-size: 2.5rem;
+  }
+  
+  .header p {
+    font-size: 1rem;
+  }
+  
+  .nav-grid {
+    grid-template-columns: 1fr;
+  }
+}
+</style>
+</head>
+<body>
+
+<div class="container">
+  <!-- Header -->
+  <div class="header">
+    <h1>Our Family History</h1>
+    <p>A View of the Owen, Bonnie, Lunde, and Murphy Families</p>
+  </div>
+
+  <!-- Welcome Message -->
+  <div class="welcome">
+    <h2>Welcome</h2>
+    <p>
+      This collection represents hundreds of hours of research, spanning generations and continents. 
+      Explore the stories, connections, and journeys of our ancestors through interactive visualizations, 
+      timelines, and detailed records. Each page offers a unique perspective on our shared heritage.
+    </p>
+  </div>
+
+  <!-- Navigation Grid -->
+  <div class="nav-grid">
+    
+    <a href="owen_interactive_tree.html" class="nav-card">
+      <div class="nav-card-icon">🌳</div>
+      <h3>Interactive Family Tree</h3>
+      <p>Explore the complete family tree with an interactive visualization. Select any person, adjust generation depth, and toggle siblings to navigate through centuries of connections.</p>
+      <div class="nav-card-arrow">→</div>
+    </a>
+
+    <a href="owen_family_atlas.html" class="nav-card">
+      <div class="nav-card-icon">🗺️</div>
+      <h3>Family Atlas</h3>
+      <p>Discover where our family lived across time with an animated geographic view. Filter by family branch, explore migration routes, and watch population changes unfold on the map.</p>
+      <div class="nav-card-arrow">→</div>
+    </a>
+
+    <a href="owen_migration_map.html" class="nav-card">
+      <div class="nav-card-icon">🌍</div>
+      <h3>Migration Map</h3>
+      <p>Trace family movements across continents and generations. See where ancestors were born, lived, and settled as they journeyed from England through Colonial America and beyond.</p>
+      <div class="nav-card-arrow">→</div>
+    </a>
+
+    <a href="owen_timeline.html" class="nav-card">
+      <div class="nav-card-icon">📅</div>
+      <h3>Historical Timeline</h3>
+      <p>View family events chronologically across generations. See births, marriages, migrations, and deaths placed in their full historical context.</p>
+      <div class="nav-card-arrow">→</div>
+    </a>
+
+    <a href="owen_statistics.html" class="nav-card">
+      <div class="nav-card-icon">📊</div>
+      <h3>Statistics Dashboard</h3>
+      <p>Analyze family patterns with interactive charts and insights. Explore lifespans, naming trends, occupations, and geographic distribution across 15 generations.</p>
+      <div class="nav-card-arrow">→</div>
+    </a>
+
+    <a href="owen_research.html" class="nav-card">
+      <div class="nav-card-icon">🔍</div>
+      <h3>Person Research</h3>
+      <p>Deep dive into individual ancestors with AI-powered research. Search by name and discover detailed biographical information, family connections, and historical context.</p>
+      <div class="nav-card-arrow">→</div>
+    </a>
+
+    <a href="owen_related.html" class="nav-card">
+      <div class="nav-card-icon">🔗</div>
+      <h3>Related Persons</h3>
+      <p>Discover how any two people in the family are connected. Trace relationship paths and explore the web of connections across branches and generations.</p>
+      <div class="nav-card-arrow">→</div>
+    </a>
+
+    <a href="owen_validate.html" class="nav-card">
+      <div class="nav-card-icon">✅</div>
+      <h3>Data Validation</h3>
+      <p>Verify the integrity of the family database. Check for reciprocal relationships, circular references, gender consistency, and other data quality measures.</p>
+      <div class="nav-card-arrow">→</div>
+    </a>
+
+  </div>
+
+  <!-- Footer -->
+  <div class="footer">
+    <p>This family history project represents years of dedicated research and documentation.</p>
+    <p>Last updated: February 2026</p>
+  </div>
+
+</div>
+
+</body>
+</html>

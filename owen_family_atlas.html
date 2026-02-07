@@ -1,0 +1,1131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Owen Family Atlas — 500 Years of Migration</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;0,700;1,300;1,400&family=Source+Sans+3:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0a0c10;--bg-panel:rgba(12,15,22,0.92);--bg-card:rgba(18,22,32,0.95);
+  --text:#d4d8e0;--text-muted:#7a8299;--text-bright:#eef0f5;
+  --accent-owen:#c19a5b;--accent-wells:#5b8fb9;--accent-eastman:#8b6fb0;
+  --accent-murphy:#c75f5f;--accent-nelson:#5baa72;--accent-bonnie:#c4a44e;--accent-lunde:#6eb5c7;
+  --gold:#c19a5b;--gold-dim:rgba(193,154,91,0.15);
+  --border:rgba(193,154,91,0.12);--border-light:rgba(193,154,91,0.25);
+  --serif:"Cormorant Garamond",Georgia,serif;--sans:"Source Sans 3","Segoe UI",sans-serif;
+  --radius:6px;
+}
+html,body{height:100%;overflow:hidden;font-family:var(--sans);background:var(--bg);color:var(--text)}
+body{display:flex;flex-direction:column}
+
+/* HOME NAV */
+.home-nav{background:var(--bg-panel);padding:8px 16px;border-bottom:1px solid var(--border);flex-shrink:0}
+.home-btn{display:inline-flex;align-items:center;gap:6px;padding:6px 14px;background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:var(--radius);color:var(--gold);text-decoration:none;font-size:11px;font-weight:500;letter-spacing:0.5px;transition:all .2s}
+.home-btn:hover{background:var(--gold-dim);border-color:var(--gold)}
+
+/* HEADER */
+.header{display:flex;align-items:center;justify-content:space-between;padding:10px 24px;background:var(--bg-panel);border-bottom:1px solid var(--border);flex-shrink:0;z-index:1000;position:relative}
+.header-left{display:flex;align-items:center;gap:16px}
+.logo{font-family:var(--serif);font-size:22px;font-weight:300;color:var(--gold);letter-spacing:1.5px}
+.logo span{font-weight:600}
+.subtitle{font-size:10px;color:var(--text-muted);letter-spacing:2.5px;text-transform:uppercase;margin-top:1px}
+.header-center{display:flex;align-items:center;gap:8px}
+.search-wrap{position:relative}
+.search-input{background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:20px;padding:6px 16px 6px 32px;color:var(--text-bright);font-family:var(--sans);font-size:12px;width:220px;outline:none;transition:all .2s}
+.search-input:focus{border-color:var(--gold);background:rgba(255,255,255,0.07);width:280px}
+.search-input::placeholder{color:var(--text-muted)}
+.search-icon{position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--text-muted);font-size:12px;pointer-events:none}
+.search-results{position:absolute;top:100%;left:0;right:0;margin-top:4px;background:var(--bg-card);border:1px solid var(--border-light);border-radius:var(--radius);max-height:260px;overflow-y:auto;z-index:2000;display:none}
+.search-results.open{display:block}
+.search-item{padding:8px 14px;cursor:pointer;border-bottom:1px solid var(--border);transition:background .15s}
+.search-item:hover{background:var(--gold-dim)}
+.search-item:last-child{border-bottom:none}
+.search-item-name{font-family:var(--serif);font-size:14px;color:var(--text-bright)}
+.search-item-detail{font-size:10px;color:var(--text-muted);margin-top:1px}
+.header-stats{display:flex;gap:18px;align-items:center}
+.stat{text-align:center}
+.stat-val{font-family:var(--serif);font-size:18px;font-weight:600;color:var(--gold)}
+.stat-label{font-size:9px;color:var(--text-muted);text-transform:uppercase;letter-spacing:1.5px}
+
+/* MAP */
+.map-wrap{flex:1;position:relative;overflow:hidden}
+#map{width:100%;height:100%;background:#0a0c10}
+.leaflet-tile-pane{filter:saturate(0.15) brightness(0.55) contrast(1.1)}
+.leaflet-control-zoom{border:1px solid var(--border)!important;background:var(--bg-panel)!important;border-radius:var(--radius)!important;overflow:hidden}
+.leaflet-control-zoom a{background:var(--bg-panel)!important;color:var(--gold)!important;border-bottom:1px solid var(--border)!important;width:32px!important;height:32px!important;line-height:32px!important;font-size:16px!important}
+.leaflet-control-zoom a:hover{background:var(--gold-dim)!important}
+.leaflet-control-attribution{background:rgba(10,12,16,0.7)!important;color:var(--text-muted)!important;font-size:9px!important}
+.leaflet-control-attribution a{color:var(--text-muted)!important}
+
+/* TIMELINE BAR */
+.timeline-bar{position:absolute;bottom:0;left:0;right:0;z-index:1000;background:var(--bg-panel);border-top:1px solid var(--border);padding:10px 24px 14px;backdrop-filter:blur(12px)}
+.timeline-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+.timeline-left{display:flex;align-items:center;gap:20px}
+.timeline-title{font-family:var(--serif);font-size:13px;color:var(--gold);letter-spacing:1px}
+.timeline-year{font-family:var(--serif);font-size:26px;font-weight:600;color:var(--text-bright);letter-spacing:1px}
+.timeline-year small{font-size:13px;font-weight:300;color:var(--text-muted);margin-left:4px}
+.timeline-controls{display:flex;gap:6px;align-items:center}
+.btn{background:transparent;border:1px solid var(--border-light);color:var(--gold);padding:5px 12px;border-radius:var(--radius);cursor:pointer;font-family:var(--sans);font-size:10px;letter-spacing:1px;text-transform:uppercase;transition:all .2s;white-space:nowrap}
+.btn:hover{background:var(--gold-dim);border-color:var(--gold)}
+.btn.active{background:var(--gold);color:var(--bg);border-color:var(--gold)}
+.btn.story-btn{background:linear-gradient(135deg,rgba(193,154,91,0.2),rgba(193,154,91,0.05));border-color:var(--gold);position:relative;overflow:hidden}
+.btn.story-btn::before{content:'';position:absolute;inset:0;background:linear-gradient(90deg,transparent,rgba(193,154,91,0.15),transparent);transform:translateX(-100%);transition:transform .6s}
+.btn.story-btn:hover::before{transform:translateX(100%)}
+.slider-wrap{position:relative;height:28px;margin-top:2px}
+.timeline-slider{-webkit-appearance:none;appearance:none;width:100%;height:4px;background:linear-gradient(90deg,rgba(193,154,91,0.15),rgba(193,154,91,0.4));border-radius:2px;outline:none;cursor:pointer;margin-top:12px}
+.timeline-slider::-webkit-slider-thumb{-webkit-appearance:none;width:16px;height:16px;border-radius:50%;background:var(--gold);border:3px solid var(--bg);cursor:grab;box-shadow:0 0 10px rgba(193,154,91,0.5)}
+.timeline-slider::-moz-range-thumb{width:16px;height:16px;border-radius:50%;background:var(--gold);border:3px solid var(--bg);cursor:grab}
+.era-markers{display:flex;justify-content:space-between;margin-top:4px;padding:0 2px;position:relative}
+.era-marker{font-size:9px;color:var(--text-muted);letter-spacing:1px}
+/* Historical event markers */
+.hist-markers{position:absolute;top:-20px;left:0;right:0;height:16px;pointer-events:none}
+.hist-dot{position:absolute;top:0;transform:translateX(-50%);cursor:default;pointer-events:auto}
+.hist-dot-pip{width:3px;height:10px;background:rgba(193,154,91,0.5);border-radius:1px;margin:0 auto}
+.hist-dot-label{font-size:7px;color:var(--text-muted);white-space:nowrap;text-align:center;margin-top:1px;opacity:0;transition:opacity .2s;letter-spacing:0.3px}
+.hist-dot:hover .hist-dot-label{opacity:1}
+
+/* FILTER BAR */
+.filter-bar{position:absolute;top:12px;left:12px;z-index:999;display:flex;flex-direction:column;gap:6px}
+.filter-group{background:var(--bg-panel);border:1px solid var(--border);border-radius:var(--radius);padding:10px 14px;backdrop-filter:blur(12px)}
+.filter-label{font-size:9px;color:var(--text-muted);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:8px}
+.branch-filters{display:flex;flex-wrap:wrap;gap:4px}
+.branch-btn{font-size:10px;padding:3px 10px;border-radius:12px;cursor:pointer;border:1px solid var(--border);background:transparent;transition:all .2s;letter-spacing:0.5px;font-family:var(--sans)}
+.branch-btn.active{border-color:currentColor}
+.view-toggles{display:flex;gap:4px;flex-wrap:wrap}
+.view-btn{font-size:10px;padding:4px 10px;border-radius:12px;cursor:pointer;border:1px solid var(--border);background:transparent;color:var(--text-muted);transition:all .2s;font-family:var(--sans);letter-spacing:0.5px}
+.view-btn.active{background:var(--gold-dim);border-color:var(--gold);color:var(--gold)}
+.view-btn:hover{border-color:var(--gold);color:var(--gold)}
+.toggle-row{display:flex;align-items:center;gap:8px;margin-top:6px}
+.toggle-label{font-size:11px;color:var(--text-muted)}
+.toggle{position:relative;width:34px;height:18px;background:var(--border);border-radius:9px;cursor:pointer;transition:background .2s;flex-shrink:0}
+.toggle.on{background:var(--gold)}
+.toggle-knob{position:absolute;top:2px;left:2px;width:14px;height:14px;border-radius:50%;background:var(--bg);transition:transform .2s}
+.toggle.on .toggle-knob{transform:translateX(16px)}
+
+/* SIDE PANEL */
+.side-panel{position:absolute;top:0;right:0;width:360px;height:100%;z-index:999;background:var(--bg-panel);border-left:1px solid var(--border);backdrop-filter:blur(16px);overflow-y:auto;transform:translateX(100%);transition:transform .35s cubic-bezier(.22,1,.36,1)}
+.side-panel.open{transform:translateX(0)}
+.panel-close{position:absolute;top:12px;right:12px;width:28px;height:28px;background:none;border:1px solid var(--border);border-radius:50%;color:var(--text-muted);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:14px;transition:all .2s;z-index:10}
+.panel-close:hover{color:var(--gold);border-color:var(--gold)}
+.panel-header{padding:18px 20px 14px;border-bottom:1px solid var(--border)}
+.panel-place{font-family:var(--serif);font-size:18px;color:var(--text-bright);font-weight:500;line-height:1.3}
+.panel-coords{font-size:10px;color:var(--text-muted);margin-top:3px;letter-spacing:1px}
+.panel-body{padding:14px 20px}
+.person-card{padding:10px 12px;margin-bottom:6px;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);transition:border-color .2s;cursor:pointer}
+.person-card:hover{border-color:var(--border-light)}
+.person-card.deceased{opacity:0.45}
+.person-card.highlighted{border-color:var(--gold);background:rgba(193,154,91,0.08)}
+.person-name{font-family:var(--serif);font-size:14px;color:var(--text-bright);font-weight:500}
+.person-dates{font-size:11px;color:var(--text-muted);margin-top:2px}
+.person-detail{font-size:11px;color:var(--text-muted);margin-top:3px;line-height:1.5}
+.person-branch{display:inline-block;font-size:9px;padding:2px 8px;border-radius:10px;margin-top:4px;letter-spacing:1px;text-transform:uppercase;font-weight:600}
+.alive-dot{display:inline-block;width:6px;height:6px;border-radius:50%;background:#5baa72;margin-right:4px;vertical-align:middle}
+.trace-btn{font-size:9px;padding:2px 8px;border-radius:10px;cursor:pointer;border:1px solid var(--gold);background:transparent;color:var(--gold);margin-left:6px;transition:all .2s;letter-spacing:0.5px;text-transform:uppercase}
+.trace-btn:hover{background:var(--gold);color:var(--bg)}
+
+/* STATS PANEL */
+.stats-panel{position:absolute;bottom:110px;right:12px;z-index:999;background:var(--bg-panel);border:1px solid var(--border);border-radius:var(--radius);padding:14px 18px;backdrop-filter:blur(12px);width:200px;transition:transform .3s,opacity .3s}
+.stats-panel.hidden{transform:translateY(20px);opacity:0;pointer-events:none}
+.stats-title{font-size:9px;color:var(--text-muted);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:8px}
+.stats-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:4px}
+.stats-label{font-size:11px;color:var(--text-muted)}
+.stats-value{font-family:var(--serif);font-size:14px;color:var(--text-bright);font-weight:500}
+.mini-bar-wrap{margin-top:10px}
+.mini-bar-label{font-size:9px;color:var(--text-muted);margin-bottom:3px;text-transform:uppercase;letter-spacing:1px}
+.mini-bar{display:flex;height:8px;border-radius:4px;overflow:hidden;gap:1px}
+.mini-bar-seg{height:100%;border-radius:2px;transition:width .4s ease}
+.stats-toggle{position:absolute;bottom:110px;right:12px;z-index:998;background:var(--bg-panel);border:1px solid var(--border);border-radius:var(--radius);padding:6px 12px;cursor:pointer;color:var(--text-muted);font-size:10px;letter-spacing:1px;text-transform:uppercase;display:none}
+
+/* STORY OVERLAY */
+.story-overlay{position:absolute;top:0;left:0;right:0;bottom:0;z-index:1500;pointer-events:none;display:none}
+.story-overlay.active{display:block}
+.story-card{position:absolute;bottom:130px;left:50%;transform:translateX(-50%);width:480px;background:var(--bg-panel);border:1px solid var(--border-light);border-radius:10px;padding:28px 32px;backdrop-filter:blur(20px);pointer-events:auto;opacity:0;transition:opacity .5s;box-shadow:0 12px 48px rgba(0,0,0,0.5)}
+.story-card.visible{opacity:1}
+.story-chapter{font-size:9px;color:var(--gold);text-transform:uppercase;letter-spacing:3px;margin-bottom:8px}
+.story-title{font-family:var(--serif);font-size:22px;color:var(--text-bright);font-weight:500;line-height:1.3;margin-bottom:10px}
+.story-text{font-size:13px;color:var(--text);line-height:1.65;letter-spacing:0.2px}
+.story-nav{display:flex;justify-content:space-between;align-items:center;margin-top:16px;padding-top:14px;border-top:1px solid var(--border)}
+.story-nav-btn{background:transparent;border:1px solid var(--border-light);color:var(--gold);padding:6px 16px;border-radius:var(--radius);cursor:pointer;font-family:var(--sans);font-size:11px;letter-spacing:1px;transition:all .2s}
+.story-nav-btn:hover{background:var(--gold-dim)}
+.story-nav-btn.primary{background:var(--gold);color:var(--bg);border-color:var(--gold)}
+.story-progress{display:flex;gap:4px}
+.story-pip{width:6px;height:6px;border-radius:50%;background:var(--border);transition:background .3s}
+.story-pip.active{background:var(--gold)}
+
+/* LEGEND */
+.legend{position:absolute;bottom:110px;left:12px;z-index:999;background:var(--bg-panel);border:1px solid var(--border);border-radius:var(--radius);padding:10px 14px;backdrop-filter:blur(12px)}
+.legend-title{font-size:9px;color:var(--text-muted);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:6px}
+.legend-row{display:flex;align-items:center;gap:8px;margin-bottom:3px}
+.legend-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.legend-label{font-size:10px;color:var(--text)}
+.legend-count{font-size:10px;color:var(--text-muted);margin-left:auto}
+
+/* POPUPS */
+.leaflet-popup-content-wrapper{background:var(--bg-card)!important;border:1px solid var(--border-light)!important;border-radius:var(--radius)!important;color:var(--text)!important;box-shadow:0 8px 32px rgba(0,0,0,0.5)!important}
+.leaflet-popup-tip{background:var(--bg-card)!important;border:1px solid var(--border)!important}
+.leaflet-popup-content{font-family:var(--sans)!important;font-size:12px!important;margin:10px 14px!important}
+.popup-title{font-family:var(--serif);font-size:14px;color:var(--text-bright);font-weight:500;margin-bottom:3px}
+.popup-sub{font-size:10px;color:var(--text-muted);letter-spacing:0.5px}
+.popup-count{font-family:var(--serif);font-size:16px;color:var(--gold);margin-top:4px}
+
+/* ANCESTOR TRACE */
+.trace-info{position:absolute;top:12px;right:380px;z-index:999;background:var(--bg-panel);border:1px solid var(--gold);border-radius:var(--radius);padding:10px 14px;backdrop-filter:blur(12px);display:none;max-width:280px}
+.trace-info.open{display:block}
+.trace-info-title{font-family:var(--serif);font-size:14px;color:var(--gold);margin-bottom:4px}
+.trace-info-text{font-size:11px;color:var(--text-muted);line-height:1.5}
+.trace-close{position:absolute;top:6px;right:8px;background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:12px}
+
+/* SCROLLBAR */
+::-webkit-scrollbar{width:6px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+::-webkit-scrollbar-thumb:hover{background:var(--border-light)}
+
+@media(max-width:768px){
+  .side-panel{width:100%}
+  .header-stats{display:none}
+  .header-center{display:none}
+  .filter-bar{top:8px;left:8px}
+  .stats-panel{display:none}
+  .story-card{width:calc(100% - 32px);bottom:120px;padding:20px 24px}
+}
+</style>
+</head>
+<body>
+
+<div class="home-nav"><a href="owen_home.html" class="home-btn">← Return to Home</a></div>
+
+<div class="header">
+  <div class="header-left">
+    <div>
+      <div class="logo">The <span>Owen</span> Family Atlas</div>
+      <div class="subtitle">500 Years of Migration &bull; 13 Countries &bull; 7 Family Lines</div>
+    </div>
+  </div>
+  <div class="header-center">
+    <div class="search-wrap">
+      <span class="search-icon">&#128269;</span>
+      <input type="text" class="search-input" id="searchInput" placeholder="Search a person..." autocomplete="off">
+      <div class="search-results" id="searchResults"></div>
+    </div>
+  </div>
+  <div class="header-stats">
+    <div class="stat"><div class="stat-val" id="visibleCount">0</div><div class="stat-label">People</div></div>
+    <div class="stat"><div class="stat-val" id="locationCount">0</div><div class="stat-label">Locations</div></div>
+    <div class="stat"><div class="stat-val" id="migrationCount">0</div><div class="stat-label">Migrations</div></div>
+  </div>
+</div>
+
+<div class="map-wrap">
+  <div id="map"></div>
+  
+  <div class="filter-bar">
+    <div class="filter-group">
+      <div class="filter-label">Family Branches</div>
+      <div class="branch-filters" id="branchFilters"></div>
+    </div>
+    <div class="filter-group">
+      <div class="filter-label">View</div>
+      <div class="view-toggles">
+        <button class="view-btn active" data-view="all" onclick="setView('all')">All</button>
+        <button class="view-btn" data-view="clusters" onclick="setView('clusters')">Clusters</button>
+        <button class="view-btn" data-view="migrations" onclick="setView('migrations')">Migrations</button>
+        <button class="view-btn" data-view="heatmap" onclick="setView('heatmap')">Heatmap</button>
+      </div>
+      <div class="toggle-row">
+        <div class="toggle" id="aliveToggle" onclick="toggleAliveOnly()"><div class="toggle-knob"></div></div>
+        <span class="toggle-label">Show only living</span>
+      </div>
+    </div>
+  </div>
+  
+  <div class="legend" id="legend"></div>
+  
+  <!-- Stats Panel (Feature 4) -->
+  <div class="stats-panel" id="statsPanel">
+    <div class="stats-title">Population at <span id="statsYear">Present</span></div>
+    <div class="stats-row"><span class="stats-label">Living</span><span class="stats-value" id="statsLiving">0</span></div>
+    <div class="stats-row"><span class="stats-label">Deceased</span><span class="stats-value" id="statsDeceased">0</span></div>
+    <div class="stats-row"><span class="stats-label">Countries</span><span class="stats-value" id="statsCountries">0</span></div>
+    <div class="stats-row"><span class="stats-label">Avg Lifespan</span><span class="stats-value" id="statsLifespan">—</span></div>
+    <div class="mini-bar-wrap">
+      <div class="mini-bar-label">Living by Branch</div>
+      <div class="mini-bar" id="miniBar"></div>
+    </div>
+    <div class="mini-bar-wrap" style="margin-top:8px">
+      <div class="mini-bar-label">Geography</div>
+      <div class="mini-bar" id="geoBar"></div>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:4px;flex-wrap:wrap" id="geoLegend"></div>
+  </div>
+  
+  <!-- Ancestor Trace Info (Feature 5) -->
+  <div class="trace-info" id="traceInfo">
+    <button class="trace-close" onclick="clearTrace()">&times;</button>
+    <div class="trace-info-title" id="traceTitle">Ancestor Trail</div>
+    <div class="trace-info-text" id="traceText"></div>
+  </div>
+  
+  <!-- Story Overlay (Feature 1) -->
+  <div class="story-overlay" id="storyOverlay">
+    <div class="story-card" id="storyCard">
+      <div class="story-chapter" id="storyChapter">Chapter 1</div>
+      <div class="story-title" id="storyTitle"></div>
+      <div class="story-text" id="storyText"></div>
+      <div class="story-nav">
+        <button class="story-nav-btn" id="storyPrev" onclick="storyPrev()">&#8592; Back</button>
+        <div class="story-progress" id="storyPips"></div>
+        <button class="story-nav-btn primary" id="storyNext" onclick="storyNext()">Next &#8594;</button>
+      </div>
+    </div>
+  </div>
+  
+  <div class="side-panel" id="sidePanel">
+    <button class="panel-close" onclick="closePanel()">&times;</button>
+    <div class="panel-header">
+      <div class="panel-place" id="panelPlace">—</div>
+      <div class="panel-coords" id="panelCoords">—</div>
+    </div>
+    <div class="panel-body" id="panelBody"></div>
+  </div>
+</div>
+
+<div class="timeline-bar">
+  <div class="timeline-header">
+    <div class="timeline-left">
+      <div>
+        <div class="timeline-title">Timeline</div>
+        <div class="timeline-year" id="yearDisplay">All Time</div>
+      </div>
+    </div>
+    <div class="timeline-controls">
+      <button class="btn story-btn" id="storyBtn" onclick="startStory()">&#9733; The Owen Story</button>
+      <button class="btn" id="playBtn" onclick="togglePlay()">&#9654; Play</button>
+      <button class="btn" onclick="resetTimeline()">Reset</button>
+    </div>
+  </div>
+  <div class="slider-wrap">
+    <div class="hist-markers" id="histMarkers"></div>
+    <input type="range" class="timeline-slider" id="timelineSlider" min="1400" max="2025" value="2025" step="1">
+  </div>
+  <div class="era-markers">
+    <span class="era-marker">1400</span><span class="era-marker">1500</span>
+    <span class="era-marker">1600</span><span class="era-marker">1700</span>
+    <span class="era-marker">1800</span><span class="era-marker">1900</span>
+    <span class="era-marker">2000</span>
+  </div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="data-loader.js"></script>
+<script>
+// ══════════════════════════════════════
+// DATA LOADER - Connects to Google Sheets
+// ══════════════════════════════════════
+
+// Geocoding lookup table (extracted from verified coordinates)
+const GEO_LOOKUP = {"new york city, new york, united states":{"lat":40.71,"lng":-74.01},"new york city, united states":{"lat":40.71,"lng":-74.01},"new york, united states":{"lat":40.71,"lng":-74.01},"united states":{"lat":40.71,"lng":-74.01},"pomona, california, united states":{"lat":34.06,"lng":-117.75},"pomona, united states":{"lat":34.06,"lng":-117.75},"california, united states":{"lat":34.06,"lng":-117.75},"san francisco, california, united states":{"lat":37.78,"lng":-122.42},"san francisco, united states":{"lat":37.78,"lng":-122.42},"london, england":{"lat":51.51,"lng":-0.13},"england":{"lat":51.51,"lng":-0.13},"san diego, california, united states":{"lat":32.72,"lng":-117.16},"san diego, united states":{"lat":32.72,"lng":-117.16},"colorado, united states":{"lat":39.55,"lng":-105.78},"longmont, colorado, united states":{"lat":40.17,"lng":-105.1},"longmont, united states":{"lat":40.17,"lng":-105.1},"landstuhl (ramstein afb), germany":{"lat":49.44,"lng":7.57},"germany":{"lat":49.44,"lng":7.57},"fort collins, colorado, united states":{"lat":40.59,"lng":-105.08},"fort collins, united states":{"lat":40.59,"lng":-105.08},"calgary, alberta, canada":{"lat":51.05,"lng":-114.07},"calgary, canada":{"lat":51.05,"lng":-114.07},"alberta, canada":{"lat":51.05,"lng":-114.07},"canada":{"lat":51.05,"lng":-114.07},"pasadena, california, united states":{"lat":34.15,"lng":-118.14},"pasadena, united states":{"lat":34.15,"lng":-118.14},"wiesbaden, germany":{"lat":50.08,"lng":8.24},"norwood, massachusetrts, united states":{"lat":42.19,"lng":-71.2},"norwood, united states":{"lat":42.19,"lng":-71.2},"massachusetrts, united states":{"lat":42.19,"lng":-71.2},"orange county, california, united states":{"lat":33.72,"lng":-117.83},"orange county, united states":{"lat":33.72,"lng":-117.83},"gary, indiana, united states":{"lat":41.59,"lng":-87.35},"gary, united states":{"lat":41.59,"lng":-87.35},"indiana, united states":{"lat":41.59,"lng":-87.35},"newport beach, california, united states":{"lat":33.62,"lng":-117.93},"newport beach, united states":{"lat":33.62,"lng":-117.93},"shreveport, louisiana, united states":{"lat":32.53,"lng":-93.75},"shreveport, united states":{"lat":32.53,"lng":-93.75},"louisiana, united states":{"lat":32.53,"lng":-93.75},"riverside, california, united states":{"lat":33.95,"lng":-117.4},"riverside, united states":{"lat":33.95,"lng":-117.4},"big fork, montana, united states":{"lat":48.06,"lng":-113.79},"big fork, united states":{"lat":48.06,"lng":-113.79},"la jolla, california, united states":{"lat":32.84,"lng":-117.27},"la jolla, united states":{"lat":32.84,"lng":-117.27},"santa anam, california, united states":{"lat":33.75,"lng":-117.87},"santa anam, united states":{"lat":33.75,"lng":-117.87},"cobb, wisconsin, united states":{"lat":43.79,"lng":-89.81},"cobb, united states":{"lat":43.79,"lng":-89.81},"wisconsin, united states":{"lat":43.79,"lng":-89.81},"los angeles, california, united states":{"lat":34.05,"lng":-118.24},"los angeles, united states":{"lat":34.05,"lng":-118.24},"redding, california, united states":{"lat":51.45,"lng":-0.97},"redding, united states":{"lat":51.45,"lng":-0.97},"wasco, california, united states":{"lat":35.59,"lng":-119.34},"wasco, united states":{"lat":35.59,"lng":-119.34},"washington, washington, united states":{"lat":47.75,"lng":-120.74},"washington, united states":{"lat":47.75,"lng":-120.74},"mission viejo, california, united states":{"lat":33.6,"lng":-117.67},"mission viejo, united states":{"lat":33.6,"lng":-117.67},"sublette, idaho, united states":{"lat":37.48,"lng":-100.84},"sublette, united states":{"lat":37.48,"lng":-100.84},"idaho, united states":{"lat":37.48,"lng":-100.84},"twin falls, idaho, united states":{"lat":42.56,"lng":-114.46},"twin falls, united states":{"lat":42.56,"lng":-114.46},"rhinelander, wisconsin, united states":{"lat":45.64,"lng":-89.41},"rhinelander, united states":{"lat":45.64,"lng":-89.41},"madison, wisconsin, united states":{"lat":43.07,"lng":-89.4},"madison, united states":{"lat":43.07,"lng":-89.4},"windsor, colorado, united states":{"lat":51.48,"lng":-0.6},"windsor, united states":{"lat":51.48,"lng":-0.6},"montfort, wisconsin, united states":{"lat":42.97,"lng":-90.43},"montfort, united states":{"lat":42.97,"lng":-90.43},"hillsdale, illinois, united states":{"lat":41.92,"lng":-84.63},"hillsdale, united states":{"lat":41.92,"lng":-84.63},"illinois, united states":{"lat":41.92,"lng":-84.63},"salt lake city, utah, united states":{"lat":40.76,"lng":-111.89},"salt lake city, united states":{"lat":40.76,"lng":-111.89},"utah, united states":{"lat":40.76,"lng":-111.89},"berlin, wisconsin, united states":{"lat":52.52,"lng":13.41},"berlin, united states":{"lat":52.52,"lng":13.41},"welton, iowa, united states":{"lat":53.36,"lng":-0.37},"welton, united states":{"lat":53.36,"lng":-0.37},"iowa, united states":{"lat":53.36,"lng":-0.37},"necedeh, wisconsin, united states":{"lat":44.02,"lng":-90.08},"necedeh, united states":{"lat":44.02,"lng":-90.08},"minocqua, wisconsin, united states":{"lat":45.87,"lng":-89.71},"minocqua, united states":{"lat":45.87,"lng":-89.71},"wisconsin, wisconsin, united states":{"lat":43.78,"lng":-88.79},"dodgeville, wisconsin, united states":{"lat":42.96,"lng":-90.13},"dodgeville, united states":{"lat":42.96,"lng":-90.13},"hillsgrove, illinois, united states":{"lat":41.86,"lng":-71.7},"hillsgrove, united states":{"lat":41.86,"lng":-71.7},"hillsgrove, wisconsin, united states":{"lat":41.86,"lng":-71.7},"rutherford, tennessee, united states":{"lat":40.83,"lng":-74.11},"rutherford, united states":{"lat":40.83,"lng":-74.11},"tennessee, united states":{"lat":40.83,"lng":-74.11},"deruyter, new york, united states":{"lat":42.76,"lng":-75.88},"deruyter, united states":{"lat":42.76,"lng":-75.88},"milton, wisconsin, united states":{"lat":52.08,"lng":-0.7},"milton, united states":{"lat":52.08,"lng":-0.7},"plainfielsd, new york, united states":{"lat":40.63,"lng":-74.41},"plainfielsd, united states":{"lat":40.63,"lng":-74.41},"shelby, ohio, united states":{"lat":40.42,"lng":-82.91},"shelby, united states":{"lat":40.42,"lng":-82.91},"ohio, united states":{"lat":40.42,"lng":-82.91},"quebec, canada":{"lat":46.81,"lng":-71.21},"allentown, pennsylvania, united states":{"lat":40.6,"lng":-75.49},"allentown, united states":{"lat":40.6,"lng":-75.49},"pennsylvania, united states":{"lat":40.6,"lng":-75.49},"milwaukee, wisconsin, united states":{"lat":43.04,"lng":-87.91},"milwaukee, united states":{"lat":43.04,"lng":-87.91},"sweden":{"lat":59.33,"lng":18.07},"ontario, canada":{"lat":51.25,"lng":-85.32},"big patch, wisconsin, united states":{"lat":42.8,"lng":-90.5},"big patch, united states":{"lat":42.8,"lng":-90.5},"grant, wisconsin, united states":{"lat":42.96,"lng":-90.82},"grant, united states":{"lat":42.96,"lng":-90.82},"delaware, united states":{"lat":38.91,"lng":-75.53},"missouri, united states":{"lat":37.96,"lng":-91.83},"champaign, ohio, united states":{"lat":48.96,"lng":3.5},"champaign, united states":{"lat":48.96,"lng":3.5},"hills grove, illinois, united states":{"lat":41.86,"lng":-71.7},"hills grove, united states":{"lat":41.86,"lng":-71.7},"fulton, illinois, united states":{"lat":41.06,"lng":-84.13},"fulton, united states":{"lat":41.06,"lng":-84.13},"rule vale, tennessee, united states":{"lat":52.3,"lng":-2.8},"rule vale, united states":{"lat":52.3,"lng":-2.8},"butler, kansas, united states":{"lat":40.59,"lng":-84.87},"butler, united states":{"lat":40.59,"lng":-84.87},"woodburn, england":{"lat":45.14,"lng":-122.86},"brockville, ontario, canada":{"lat":44.59,"lng":-75.69},"brockville, canada":{"lat":44.59,"lng":-75.69},"montreal, quebec, canada":{"lat":45.5,"lng":-73.57},"montreal, canada":{"lat":45.5,"lng":-73.57},"hopkinton, rhode island, united states":{"lat":41.46,"lng":-71.78},"hopkinton, united states":{"lat":41.46,"lng":-71.78},"rhode island, united states":{"lat":41.46,"lng":-71.78},"adams center, new york, united states":{"lat":43.86,"lng":-76.01},"adams center, united states":{"lat":43.86,"lng":-76.01},"unadilla forks, new york, united states":{"lat":42.6,"lng":-75.26},"unadilla forks, united states":{"lat":42.6,"lng":-75.26},"harrison, west virginia, united states":{"lat":41.03,"lng":-73.73},"harrison, united states":{"lat":41.03,"lng":-73.73},"west virginia, united states":{"lat":41.03,"lng":-73.73},"lost creek, west virginia, united states":{"lat":39,"lng":-80.38},"lost creek, united states":{"lat":39,"lng":-80.38},"devonshire, england":{"lat":50.72,"lng":-3.53},"scotland":{"lat":56.49,"lng":-4.2},"leheigh, pennsylvania, united states":{"lat":41.2,"lng":-77.19},"leheigh, united states":{"lat":41.2,"lng":-77.19},"ireland":{"lat":53.14,"lng":-7.69},"mowhawk river, vermont, united states":{"lat":42.96,"lng":-73.98},"mowhawk river, united states":{"lat":42.96,"lng":-73.98},"vermont, united states":{"lat":42.96,"lng":-73.98},"wingville, wisconsin, united states":{"lat":42.86,"lng":-90.37},"wingville, united states":{"lat":42.86,"lng":-90.37},"sussex, delaware, united states":{"lat":50.92,"lng":-0.14},"sussex, united states":{"lat":50.92,"lng":-0.14},"paris, kentucky, united states":{"lat":48.86,"lng":2.35},"paris, united states":{"lat":48.86,"lng":2.35},"kentucky, united states":{"lat":48.86,"lng":2.35},"st. charles, missouri, united states":{"lat":38.78,"lng":-90.48},"st. charles, united states":{"lat":38.78,"lng":-90.48},"virgionia, united states":{"lat":37.43,"lng":-78.66},"mason, kentucky, united states":{"lat":39.36,"lng":-84.31},"mason, united states":{"lat":39.36,"lng":-84.31},"tenness, illinois, united states":{"lat":35.52,"lng":-86.58},"tenness, united states":{"lat":35.52,"lng":-86.58},"fairfield, connecticut, united states":{"lat":41.14,"lng":-73.26},"fairfield, united states":{"lat":41.14,"lng":-73.26},"connecticut, united states":{"lat":41.14,"lng":-73.26},"macomb, illinois, united states":{"lat":40.46,"lng":-90.67},"macomb, united states":{"lat":40.46,"lng":-90.67},"nottaway, virginia, united states":{"lat":37.15,"lng":-78.05},"nottaway, united states":{"lat":37.15,"lng":-78.05},"virginia, united states":{"lat":37.15,"lng":-78.05},"nashville, tennessee, united states":{"lat":36.16,"lng":-86.78},"nashville, united states":{"lat":36.16,"lng":-86.78},"perth amboy, new jersey, united states":{"lat":40.51,"lng":-74.27},"perth amboy, united states":{"lat":40.51,"lng":-74.27},"new jersey, united states":{"lat":40.51,"lng":-74.27},"pickaway, ohio, united states":{"lat":39.57,"lng":-82.94},"pickaway, united states":{"lat":39.57,"lng":-82.94},"dorsett, england":{"lat":50.75,"lng":-2.33},"new milford, connecticut, united states":{"lat":41.58,"lng":-73.41},"new milford, united states":{"lat":41.58,"lng":-73.41},"milford, connecticut, united states":{"lat":51.09,"lng":-0.78},"milford, united states":{"lat":51.09,"lng":-0.78},"williamstown, ontario, canada":{"lat":42.71,"lng":-73.2},"williamstown, canada":{"lat":42.71,"lng":-73.2},"cornwall, ontario, canada":{"lat":50.27,"lng":-5.05},"cornwall, canada":{"lat":50.27,"lng":-5.05},"saint charles, missouri, united states":{"lat":38.78,"lng":-90.48},"saint charles, united states":{"lat":38.78,"lng":-90.48},"st. paul parish, virginia, united states":{"lat":51.51,"lng":-0.1},"st. paul parish, united states":{"lat":51.51,"lng":-0.1},"mad river, ohio, united states":{"lat":39.72,"lng":-83.96},"mad river, united states":{"lat":39.72,"lng":-83.96},"dumphries, virginia, united states":{"lat":55.07,"lng":-3.61},"dumphries, united states":{"lat":55.07,"lng":-3.61},"champagne, ohio, united states":{"lat":48.96,"lng":3.5},"champagne, united states":{"lat":48.96,"lng":3.5},"fowler, ohio, united states":{"lat":40.62,"lng":-85.58},"fowler, united states":{"lat":40.62,"lng":-85.58},"new york, new york, united states":{"lat":42.17,"lng":-74.95},"westerly, rhode island, united states":{"lat":41.38,"lng":-71.83},"westerly, united states":{"lat":41.38,"lng":-71.83},"pickaway, new jersey, united states":{"lat":39.57,"lng":-82.94},"suffolk, england":{"lat":52.19,"lng":1},"morristown, new jersey, united states":{"lat":40.8,"lng":-74.48},"morristown, united states":{"lat":40.8,"lng":-74.48},"fairfield, new york, united states":{"lat":41.14,"lng":-73.26},"orange county, north carolina, united states":{"lat":33.72,"lng":-117.83},"north carolina, united states":{"lat":33.72,"lng":-117.83},"londonderry, ireland":{"lat":54.99,"lng":-7.32},"port conway, virginia, british colonial america":{"lat":38.33,"lng":-77.29},"port conway, british colonial america":{"lat":38.33,"lng":-77.29},"virginia, british colonial america":{"lat":38.33,"lng":-77.29},"british colonial america":{"lat":38.33,"lng":-77.29},"king george, virginia, united states":{"lat":38.27,"lng":-77.19},"king george, united states":{"lat":38.27,"lng":-77.19},"stafford, virginia, united states":{"lat":52.81,"lng":-2.12},"stafford, united states":{"lat":52.81,"lng":-2.12},"saratoga, new york, united states":{"lat":43.08,"lng":-73.78},"saratoga, united states":{"lat":43.08,"lng":-73.78},"lunenburg, virginia, united states":{"lat":44.38,"lng":-64.32},"lunenburg, united states":{"lat":44.38,"lng":-64.32},"pittsylvania, virginia, united states":{"lat":36.82,"lng":-79.43},"pittsylvania, united states":{"lat":36.82,"lng":-79.43},"buckingham, england":{"lat":51.99,"lng":-0.99},"danbury, connecticut, united states":{"lat":41.4,"lng":-73.45},"danbury, united states":{"lat":41.4,"lng":-73.45},"albany, new york, united states":{"lat":42.65,"lng":-73.76},"albany, united states":{"lat":42.65,"lng":-73.76},"washington, rhode island, united states":{"lat":47.75,"lng":-120.74},"harrison, virginia, united states":{"lat":41.03,"lng":-73.73},"hadley, massachusetts, united states":{"lat":52.58,"lng":-1.56},"hadley, united states":{"lat":52.58,"lng":-1.56},"massachusetts, united states":{"lat":52.58,"lng":-1.56},"suffield, connecticut, united states":{"lat":41.98,"lng":-72.65},"suffield, united states":{"lat":41.98,"lng":-72.65},"northhampton, massachusetts, united states":{"lat":52.24,"lng":-0.9},"northhampton, united states":{"lat":52.24,"lng":-0.9},"deerfield, massachusetts, united states":{"lat":42.54,"lng":-72.61},"deerfield, united states":{"lat":42.54,"lng":-72.61},"sumerset, maryland, united states":{"lat":51.1,"lng":-2.96},"sumerset, united states":{"lat":51.1,"lng":-2.96},"maryland, united states":{"lat":51.1,"lng":-2.96},"worcester, maryland, united states":{"lat":52.19,"lng":-2.22},"worcester, united states":{"lat":52.19,"lng":-2.22},"petersburg, virginia, united states":{"lat":37.23,"lng":-77.4},"petersburg, united states":{"lat":37.23,"lng":-77.4},"faiirfield, connecticut, united states":{"lat":41.14,"lng":-73.26},"faiirfield, united states":{"lat":41.14,"lng":-73.26},"ipswith, england":{"lat":52.06,"lng":1.15},"woodbridge, new jersey, united states":{"lat":40.56,"lng":-74.28},"woodbridge, united states":{"lat":40.56,"lng":-74.28},"salisbury, massachusetts, united states":{"lat":51.07,"lng":-1.79},"salisbury, united states":{"lat":51.07,"lng":-1.79},"heartford, connecticut, united states":{"lat":51.8,"lng":-0.08},"heartford, united states":{"lat":51.8,"lng":-0.08},"northampton, massachusetts, united states":{"lat":52.24,"lng":-0.9},"northampton, united states":{"lat":52.24,"lng":-0.9},"richmond, virginia, united states":{"lat":37.54,"lng":-77.44},"richmond, united states":{"lat":37.54,"lng":-77.44},"new haven, connecticut, united states":{"lat":41.31,"lng":-72.92},"new haven, united states":{"lat":41.31,"lng":-72.92},"charles city, virginia, united states":{"lat":37.34,"lng":-77.06},"charles city, united states":{"lat":37.34,"lng":-77.06},"prince george, virginia, united states":{"lat":37.22,"lng":-77.02},"prince george, united states":{"lat":37.22,"lng":-77.02},"kent, england":{"lat":51.28,"lng":0.52},"colchester, england":{"lat":51.89,"lng":0.9},"vastmanland, sweden":{"lat":59.67,"lng":16.5},"new london, connecticut, united states":{"lat":41.36,"lng":-72.1},"new london, united states":{"lat":41.36,"lng":-72.1},"downton, wilshire, england":{"lat":51,"lng":-1.73},"downton, england":{"lat":51,"lng":-1.73},"wilshire, england":{"lat":51,"lng":-1.73},"badby, england":{"lat":52.26,"lng":-1.13},"northhampton, virginia, united states":{"lat":52.24,"lng":-0.9},"summerset, maryland, united states":{"lat":51.1,"lng":-2.96},"summerset, united states":{"lat":51.1,"lng":-2.96},"wales":{"lat":52.13,"lng":-3.78},"varina, virginia, united states":{"lat":37.43,"lng":-77.32},"varina, united states":{"lat":37.43,"lng":-77.32},"middlesex, england":{"lat":51.53,"lng":-0.28},"cornwall, england":{"lat":50.27,"lng":-5.05},"appomattuck, virginia, united states":{"lat":37.38,"lng":-77.85},"appomattuck, united states":{"lat":37.38,"lng":-77.85},"buckinham, england":{"lat":51.99,"lng":-0.99},"sumerset, england":{"lat":51.1,"lng":-2.96},"wellstown, rhode island, united states":{"lat":52.4,"lng":-1},"wellstown, united states":{"lat":52.4,"lng":-1},"stoockholm, sweden":{"lat":59.33,"lng":18.07},"ganda, holland":{"lat":51.05,"lng":3.72},"holland":{"lat":51.05,"lng":3.72},"scotland, scotland":{"lat":56.49,"lng":-4.2},"downton, wiltshire, england":{"lat":51,"lng":-1.73},"wiltshire, england":{"lat":51,"lng":-1.73},"northhampshire, england":{"lat":52.27,"lng":-0.88},"oxfordshire, england":{"lat":51.75,"lng":-1.26},"berkshire, england":{"lat":51.45,"lng":-1.2},"norwich, essex, england":{"lat":52.63,"lng":1.3},"norwich, england":{"lat":52.63,"lng":1.3},"stockholm, sweden":{"lat":59.33,"lng":18.07},"northhampton, england":{"lat":52.24,"lng":-0.9},"amsterdam, netherlands":{"lat":52.37,"lng":4.9},"netherlands":{"lat":52.37,"lng":4.9},"england, england":{"lat":52.36,"lng":-1.17},"sussex, england":{"lat":50.92,"lng":-0.14},"machynlleth, wales":{"lat":52.59,"lng":-3.85},"reading, england":{"lat":51.45,"lng":-0.97},"reeding, england":{"lat":51.45,"lng":-0.97},"bedfordshire, england":{"lat":52.14,"lng":-0.47},"buckinghamshire, england":{"lat":51.81,"lng":-0.81},"ringstead, england":{"lat":52.38,"lng":-0.6},"southwick, england":{"lat":50.83,"lng":-0.24},"stratford-on-avon, england":{"lat":52.19,"lng":-1.71},"oldham, england":{"lat":53.54,"lng":-2.12},"bosworth field, england":{"lat":52.6,"lng":-1.4},"straffordshire, england":{"lat":52.83,"lng":-2},"lincolnshire, england":{"lat":53.23,"lng":-0.54},"west yorkshire, england":{"lat":53.8,"lng":-1.75},"hemlock, miichigan, united states":{"lat":43.42,"lng":-84.23},"gatesville, texas, united states":{"lat":31.44,"lng":-97.74},"michigan, united states":{"lat":44.31,"lng":-85.6},"saginaw, michigan, united states":{"lat":43.42,"lng":-83.95},"lynn, massachusetts, united states":{"lat":42.47,"lng":-70.95},"rawlins, wyoming, united states":{"lat":41.79,"lng":-107.24},"midland county, michigan, united states":{"lat":43.63,"lng":-84.23},"nova scotia, canada":{"lat":44.65,"lng":-63.57},"valbo, sweden, sweden":{"lat":60.63,"lng":16.88},"wyoming, united states":{"lat":43.08,"lng":-107.29},"varmlans, sweden, sweden":{"lat":59.73,"lng":13.5},"carlow, ireland, ireland":{"lat":52.84,"lng":-6.93},"canada, canada":{"lat":56.13,"lng":-106.35},"nenagh, pennsylvania, united states":{"lat":40.5,"lng":-75.5},"phildelphia, pennsylvania, united states":{"lat":39.95,"lng":-75.17},"konigreich, germany, germany":{"lat":51.05,"lng":13.74},"franconia, germany, germany":{"lat":49.5,"lng":10.5},"ireland, ireland":{"lat":53.14,"lng":-7.69},"cape breton, nova scotia, canada":{"lat":46.14,"lng":-60.77},"guysborough, nova scotia, canada":{"lat":45.39,"lng":-61.5},"cork, ireland, ireland":{"lat":51.9,"lng":-8.47},"nova scotia, ireland":{"lat":44.65,"lng":-63.57},"sweden, sweden":{"lat":59.33,"lng":18.07},"nordmark, swden, sweden":{"lat":59.58,"lng":12.3},"weld county. colorado, united states":{"lat":40.55,"lng":-104.39},"loveland, colorado, united states":{"lat":40.4,"lng":-105.08},"ryssby, colorado, united states":{"lat":40.1,"lng":-105.15},"lasaryud liagard, sweden, sweden":{"lat":59.5,"lng":13.2},"st. louis, missouri, united states":{"lat":38.63,"lng":-90.2},"boulder, colorado, united states":{"lat":40.01,"lng":-105.27},"ryssby, sweden, sweden":{"lat":56.78,"lng":15.58},"denver, colorado, united states":{"lat":39.74,"lng":-104.99},"gunghult, sweden, sweden":{"lat":57.6,"lng":12.3},"angelstad, sweden, united states":{"lat":56.87,"lng":14.1},"sodra, sweden, sweden":{"lat":57.7,"lng":11.97},"sodra, sweden, united states":{"lat":57.7,"lng":11.97},"plymouth, vermont, united states":{"lat":43.53,"lng":-72.73},"andover, vermont, united states":{"lat":43.32,"lng":-72.72},"chillicothe, missouri, united states":{"lat":39.79,"lng":-93.55},"port byron, new york, united states":{"lat":43.03,"lng":-76.63},"mcarthur, ohio, united states":{"lat":39.25,"lng":-82.48},"baldwin, wisconsin, united states":{"lat":44.97,"lng":-92.37},"lynd, minnesota, united states":{"lat":44.39,"lng":-95.89},"hammond, wisconsin, united states":{"lat":44.97,"lng":-92.44},"sheboygan, wisconsin, united states":{"lat":43.75,"lng":-87.71},"minneapolis, minnesota, united states":{"lat":44.98,"lng":-93.27},"aalten, netherlands, netherlands":{"lat":51.93,"lng":6.58},"buskenrud, norway, norway":{"lat":60.07,"lng":9},"norway":{"lat":60.07,"lng":9},"deerfield, wisconsin, united states":{"lat":43.05,"lng":-89.08},"brunborg, norway, norway":{"lat":60.82,"lng":11.07},"astoria, illinois, united states":{"lat":40.23,"lng":-90.36},"eloise, michigan, united states":{"lat":42.31,"lng":-83.39},"regina beach, canada":{"lat":50.78,"lng":-105.02},"moose jaw, canada":{"lat":50.39,"lng":-105.53},"saskatchewan, canada":{"lat":52.94,"lng":-106.45},"griggs, no. dakota, united states":{"lat":47.45,"lng":-98.23},"keith, scotland":{"lat":57.54,"lng":-2.95},"regina, saskatchewan, canada":{"lat":50.45,"lng":-104.62},"regina, canada":{"lat":50.45,"lng":-104.62},"san diego, ca, united states":{"lat":32.72,"lng":-117.16},"pacific beach, california, united states":{"lat":32.79,"lng":-117.24},"pacific beach, united states":{"lat":32.79,"lng":-117.24},"butler county, united states":{"lat":39.44,"lng":-84.58},"warren, n y, united states":{"lat":43.3,"lng":-73.85},"el paso, united states":{"lat":31.76,"lng":-106.49},"johnsburg, neb, united states":{"lat":42.5,"lng":-98.3},"lyon. ks, united states":{"lat":38.52,"lng":-96.09},"washington, ny, united states":{"lat":43.1,"lng":-73.66},"warren, ny, united states":{"lat":43.3,"lng":-73.85},"dutchess, ny, united states":{"lat":41.77,"lng":-73.74},"hamburg, germany":{"lat":53.55,"lng":9.99},"dresden, germany":{"lat":51.05,"lng":13.74},"north sea, germany":{"lat":56,"lng":3},"limerick, ireland":{"lat":52.66,"lng":-8.63},"cork, ireland":{"lat":51.9,"lng":-8.47}};
+
+// CSV URL - Replace with your published Google Sheets CSV URL
+// CSV URL defined in data-loader.js as SHEET_CSV_URL
+
+let PEOPLE = [];
+let MIGRATIONS = [];
+
+// Geocode a location from city/state/country fields
+function geocode(city, state, country) {
+  if (!city && !state && !country) return null;
+  const candidates = [];
+  if (city && state && country) candidates.push((city + ', ' + state + ', ' + country).toLowerCase());
+  if (city && country) candidates.push((city + ', ' + country).toLowerCase());
+  if (state && country) candidates.push((state + ', ' + country).toLowerCase());
+  if (country) candidates.push(country.toLowerCase());
+  if (city && state) candidates.push((city + ', ' + state).toLowerCase());
+  if (city) candidates.push(city.toLowerCase());
+  for (const key of candidates) {
+    if (GEO_LOOKUP[key]) return GEO_LOOKUP[key];
+  }
+  return null;
+}
+
+// Build birthPlace string from components
+function buildPlaceStr(city, state, country) {
+  return [city, state, country].filter(Boolean).join(', ') || '';
+}
+
+// Determine alive status: if no deathYear, person is assumed alive
+// unless they were born so long ago it's impossible
+function inferAlive(p) {
+  if (p.deathYear) return false;
+  if (!p.birthYear) return false;
+  // If born before 1900 and no death year, assume deceased
+  if (p.birthYear < 1900) return false;
+  return true;
+}
+
+// Transform a data-loader person record into atlas-compatible format
+function transformPerson(raw) {
+  const birthGeo = geocode(raw.birthCity, raw.birthState, raw.birthCountry);
+  const deathGeo = geocode(raw.deathCity, raw.deathState, raw.deathCountry);
+  const alive = inferAlive(raw);
+  const branch = raw.branchLineage || 'Owen';
+
+  return {
+    id: raw.id,
+    name: raw.name || raw.fullName || ((raw.firstName || '') + ' ' + (raw.lastName || '')).trim(),
+    firstName: raw.firstName,
+    lastName: raw.lastName,
+    gender: raw.gender,
+    branch: branch,
+    fatherId: raw.fatherId || null,
+    motherId: raw.motherId || null,
+    birthYear: raw.birthYear,
+    deathYear: raw.deathYear,
+    alive: alive,
+    birthCity: raw.birthCity,
+    birthState: raw.birthState,
+    birthCountry: raw.birthCountry,
+    birthPlace: buildPlaceStr(raw.birthCity, raw.birthState, raw.birthCountry),
+    birthLat: birthGeo ? birthGeo.lat : null,
+    birthLng: birthGeo ? birthGeo.lng : null,
+    deathCity: raw.deathCity,
+    deathState: raw.deathState,
+    deathCountry: raw.deathCountry,
+    deathPlace: buildPlaceStr(raw.deathCity, raw.deathState, raw.deathCountry),
+    deathLat: deathGeo ? deathGeo.lat : null,
+    deathLng: deathGeo ? deathGeo.lng : null,
+    occupation: raw.occupation,
+    military: raw.military,
+    immigrationYear: raw.immigrationYear,
+    residenceCity: raw.residenceCity,
+    residenceState: raw.residenceState,
+    residenceCountry: raw.residenceCountry
+  };
+}
+
+// Generate migration arcs from parent-child relationships
+function buildMigrations(people) {
+  const idMap = {};
+  people.forEach(p => { if (p.id) idMap[p.id] = p; });
+  const migrations = [];
+
+  people.forEach(child => {
+    if (!child.birthLat) return;
+    // Try father first, then mother
+    const parentId = child.fatherId || child.motherId;
+    if (!parentId) return;
+    const parent = idMap[parentId];
+    if (!parent || !parent.birthLat) return;
+    // Skip if same location (within ~0.1 degrees)
+    if (Math.abs(parent.birthLat - child.birthLat) < 0.05 &&
+        Math.abs(parent.birthLng - child.birthLng) < 0.05) return;
+
+    migrations.push({
+      fromLat: parent.birthLat,
+      fromLng: parent.birthLng,
+      toLat: child.birthLat,
+      toLng: child.birthLng,
+      fromName: parent.name,
+      toName: child.name,
+      fromPlace: parent.birthPlace,
+      toPlace: child.birthPlace,
+      year: child.birthYear || null,
+      branch: child.branch,
+      parentId: parent.id,
+      childId: child.id
+    });
+  });
+
+  return migrations;
+}
+
+// Load data from Google Sheets via FamilyDatabase
+async function loadData() {
+  const loadingEl = document.getElementById('yearDisplay');
+  if (loadingEl) loadingEl.innerHTML = 'Loading…';
+
+  try {
+    const db = owenFamilyDB; // Use global instance from data-loader.js
+    const data = await db.getData();
+    
+    if (!data.people || data.people.length === 0) {
+      throw new Error('No data loaded from Google Sheets');
+    }
+
+    console.log('Raw records from Google Sheets:', data.people.length);
+
+    // Transform all people
+    PEOPLE = data.people.map(transformPerson);
+    
+    // Log geocoding stats
+    const geocoded = PEOPLE.filter(p => p.birthLat).length;
+    console.log('Geocoded:', geocoded, 'of', PEOPLE.length, 
+                '(' + Math.round(geocoded/PEOPLE.length*100) + '%)');
+    
+    const ungeo = PEOPLE.filter(p => !p.birthLat && (p.birthCity || p.birthState || p.birthCountry));
+    if (ungeo.length > 0) {
+      console.warn('Could not geocode ' + ungeo.length + ' people:');
+      ungeo.forEach(p => console.warn('  ' + p.name + ': ' + p.birthPlace));
+    }
+
+    // Build migration arcs
+    MIGRATIONS = buildMigrations(PEOPLE);
+    console.log('Migration arcs generated:', MIGRATIONS.length);
+
+    // Update header stats
+    const countries = new Set(PEOPLE.map(p => p.birthCountry).filter(Boolean));
+    const branches = new Set(PEOPLE.map(p => p.branch).filter(Boolean));
+    document.querySelector('.subtitle').textContent = 
+      '500 Years of Migration • ' + countries.size + ' Countries • ' + branches.size + ' Family Lines';
+
+  } catch (err) {
+    console.error('Failed to load data:', err);
+    if (loadingEl) loadingEl.innerHTML = '<span style="color:#c75f5f">Data load error</span>';
+    alert('Failed to load family data. Check the console for details and verify GOOGLE_SHEETS_CSV_URL is set correctly.');
+    return false;
+  }
+  return true;
+}
+
+const BRANCH_COLORS = {
+  Owen:'#c19a5b', Wells:'#5b8fb9', Eastman:'#8b6fb0',
+  Murphy:'#c75f5f', Nelson:'#5baa72', Bonnie:'#c4a44e', Lunde:'#6eb5c7'
+};
+
+// ══════════════════════════════════════
+// FEATURE 2: Historical Events
+// ══════════════════════════════════════
+const HISTORICAL_EVENTS = [
+  {year:1492,label:"Columbus"},
+  {year:1534,label:"English Reformation"},
+  {year:1607,label:"Jamestown"},
+  {year:1620,label:"Mayflower"},
+  {year:1636,label:"Great Migration ends"},
+  {year:1692,label:"Salem Trials"},
+  {year:1718,label:"New Orleans founded"},
+  {year:1776,label:"Independence"},
+  {year:1803,label:"Louisiana Purchase"},
+  {year:1812,label:"War of 1812"},
+  {year:1848,label:"Gold Rush begins"},
+  {year:1849,label:"California Gold Rush"},
+  {year:1861,label:"Civil War begins"},
+  {year:1865,label:"Civil War ends"},
+  {year:1869,label:"Transcontinental Railroad"},
+  {year:1882,label:"Immigration Act"},
+  {year:1892,label:"Ellis Island opens"},
+  {year:1914,label:"World War I"},
+  {year:1918,label:"WWI ends / Flu pandemic"},
+  {year:1929,label:"Great Depression"},
+  {year:1941,label:"Pearl Harbor / WWII"},
+  {year:1945,label:"WWII ends"},
+  {year:1969,label:"Moon landing"},
+  {year:2001,label:"September 11"}
+];
+
+// ══════════════════════════════════════
+// FEATURE 1: Guided Story Tour
+// ══════════════════════════════════════
+const STORY_CHAPTERS = [
+  {
+    title:"Origins in Medieval England",
+    text:"The Owen family story begins in the counties of medieval England — Kent, Cornwall, Sussex, and the Welsh marches. As early as the 1400s, ancestors bearing the names Barnham, Welles, and Owain lived in a world of manor houses, parish churches, and feudal obligation. The earliest known ancestor, Thomas Barnham, was born around 1270 in West Yorkshire.",
+    year:1500, lat:52.0, lng:-1.5, zoom:6, branches:null
+  },
+  {
+    title:"The Tudor & Elizabethan Era",
+    text:"By the 1500s, the family lines were well established across southern England. William Owain was born in Machynlleth, Wales around 1568. The Welles, Eastman, and Bonnie lines spread across Buckinghamshire, Suffolk, and Cornwall. England's Reformation transformed church life and would soon drive emigration.",
+    year:1580, lat:51.8, lng:-1.0, zoom:6, branches:null
+  },
+  {
+    title:"The Great Migration to America",
+    text:"Beginning in the 1630s, the Owen, Wells, Eastman, and Bonnie ancestors crossed the Atlantic during the Puritan Great Migration. They settled in Massachusetts, Connecticut, and Virginia — building new lives in New England's towns and the Chesapeake's plantations. By 1650, the balance had tipped: more family members lived in America than in England.",
+    year:1650, lat:40.0, lng:-50.0, zoom:4, branches:null
+  },
+  {
+    title:"Colonial Expansion",
+    text:"Through the 1700s, the family spread across colonial America — from Hopkinton and Westerly in Rhode Island, to Perth Amboy in New Jersey, to the Virginia tidewater counties of Charles City and King George. The Revolutionary War transformed subjects into citizens. Several ancestors served in the Continental forces.",
+    year:1760, lat:39.5, lng:-74.0, zoom:6, branches:null
+  },
+  {
+    title:"The Scandinavian & Irish Arrivals",
+    text:"The 1800s brought fresh blood from across the Atlantic. The Nelson and Lunde branches arrived from Sweden and Norway — from Värmland, Ryssby, and Brunborg — settling in Minnesota and Wisconsin. The Murphy line crossed from Cork, Ireland to Nova Scotia, then migrated south into Michigan. These immigrant families would soon intermarry with the old colonial lines.",
+    year:1870, lat:46.0, lng:-90.0, zoom:5, branches:['Nelson','Lunde','Murphy']
+  },
+  {
+    title:"Westward Through the Heartland",
+    text:"The great 19th-century westward push carried the family through Ohio, Illinois, Wisconsin, and Iowa. The Eastman line moved through Vermont and New York to the upper Midwest. The Owen line passed through Ohio and Indiana. Everywhere, they followed railroads, farmland, and opportunity — part of the vast American migration from coast to coast.",
+    year:1880, lat:42.0, lng:-87.0, zoom:5, branches:['Owen','Eastman']
+  },
+  {
+    title:"California Dreaming",
+    text:"By 1900, California beckoned. Riverside became the family's great gathering place — twelve family members were born there, more than any other city in the database. The Owen, Wells, and Bonnie branches converged in Southern California, drawn by citrus groves, sunshine, and the promise of the West Coast. Los Angeles, San Diego, and Pasadena also became home.",
+    year:1935, lat:34.0, lng:-117.5, zoom:7, branches:['Owen','Wells','Bonnie']
+  },
+  {
+    title:"The Modern Era & Return to London",
+    text:"The 21st century brought new chapters. The family concentrated in Longmont, Colorado — four births since 2000. And in a poetic full-circle, three family members were born in London, England, returning to the island the family left nearly 400 years earlier. Today, the Owen family spans 13 countries, 38 states, and 232 unique cities across 500 years of recorded history.",
+    year:2025, lat:35.0, lng:-20.0, zoom:3, branches:null
+  }
+];
+
+// ══════════════════════════════════════
+// STATE
+// ══════════════════════════════════════
+let map, markersLayer, migrationLayer, traceLayer;
+let activeBranches = new Set(Object.keys(BRANCH_COLORS));
+let currentView = 'all';
+let currentYear = 2025;
+let aliveOnly = false;
+let isPlaying = false;
+let playInterval = null;
+let locationGroups = {};
+let storyActive = false;
+let storyIndex = 0;
+let tracedPerson = null;
+let drawnArcs = new Map(); // for animated arcs
+
+// ID lookup - built after data loads
+const ID_MAP = {};
+function buildIdMap() {
+  Object.keys(ID_MAP).forEach(k => delete ID_MAP[k]);
+  PEOPLE.forEach(p => { if(p.id) ID_MAP[p.id] = p; });
+}
+
+// ══════════════════════════════════════
+// PERSON VISIBILITY
+// ══════════════════════════════════════
+function isPersonVisible(p) {
+  if (!activeBranches.has(p.branch)) return false;
+  if (!p.birthYear) return currentYear >= 2025 && !aliveOnly;
+  if (p.birthYear > currentYear) return false;
+  if (aliveOnly) {
+    if (p.alive && (!p.deathYear || p.deathYear > currentYear)) return true;
+    if (p.deathYear && p.deathYear <= currentYear) return false;
+    if (!p.deathYear && !p.alive) return false;
+    return true;
+  }
+  return true;
+}
+function isAliveAtYear(p) {
+  if (!p.birthYear || p.birthYear > currentYear) return false;
+  if (p.alive) return !p.deathYear || p.deathYear > currentYear;
+  if (p.deathYear) return p.deathYear > currentYear;
+  return true;
+}
+
+// ══════════════════════════════════════
+// INIT
+// ══════════════════════════════════════
+function initMap() {
+  map = L.map('map', {center:[35,-20], zoom:3, minZoom:2, maxZoom:14, zoomControl:true});
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+    attribution:'&copy; OpenStreetMap &copy; CARTO', subdomains:'abcd', maxZoom:19
+  }).addTo(map);
+  markersLayer = L.layerGroup().addTo(map);
+  migrationLayer = L.layerGroup().addTo(map);
+  traceLayer = L.layerGroup().addTo(map);
+  buildBranchFilters();
+  buildLegend();
+  buildHistMarkers();
+  groupLocations();
+  render();
+}
+
+function groupLocations() {
+  locationGroups = {};
+  PEOPLE.forEach(p => {
+    if (!p.birthLat) return;
+    const key = Math.round(p.birthLat*100)/100+','+Math.round(p.birthLng*100)/100;
+    if (!locationGroups[key]) {
+      locationGroups[key] = {lat:p.birthLat, lng:p.birthLng, place:p.birthCity||p.birthState||p.birthCountry||'Unknown', people:[]};
+    }
+    locationGroups[key].people.push(p);
+  });
+}
+
+// ══════════════════════════════════════
+// RENDERING
+// ══════════════════════════════════════
+function render() {
+  markersLayer.clearLayers();
+  migrationLayer.clearLayers();
+  const showC = currentView==='all'||currentView==='clusters'||currentView==='heatmap';
+  const showM = currentView==='all'||currentView==='migrations';
+  const showH = currentView==='heatmap';
+  if (showM) renderMigrations();
+  if (showC) renderClusters();
+  if (showH) renderHeatOverlay();
+  updateStats();
+  updateStatsPanel();
+}
+
+function renderClusters() {
+  Object.values(locationGroups).forEach(loc => {
+    const filtered = loc.people.filter(isPersonVisible);
+    if (!filtered.length) return;
+    const aliveCount = filtered.filter(p => isAliveAtYear(p)).length;
+    const branchCounts = {};
+    filtered.forEach(p => { branchCounts[p.branch]=(branchCounts[p.branch]||0)+1; });
+    const dom = Object.entries(branchCounts).sort((a,b)=>b[1]-a[1])[0][0];
+    const color = BRANCH_COLORS[dom]||'#888';
+    const sz = Math.max(8, Math.min(32, 6+filtered.length*3));
+    const op = currentView==='heatmap'?0.3:0.85;
+    const m = L.circleMarker([loc.lat,loc.lng], {radius:sz/2, fillColor:color, fillOpacity:op, color, weight:1.5, opacity:op*0.7});
+    const pl = filtered.length===1?'person':'people';
+    const aliveText = aliveOnly?` (${aliveCount} living)`:(aliveCount>0&&currentYear<2025?` · ${aliveCount} living`:'');
+    m.bindTooltip(`<div class="popup-title">${loc.place}</div><div class="popup-count">${filtered.length} ${pl}${aliveText}</div><div class="popup-sub">Click for details</div>`,{direction:'top',offset:[0,-8]});
+    m.on('click', ()=>openPanel(loc,filtered));
+    m.addTo(markersLayer);
+  });
+}
+
+// ── Bezier curve ──
+function bezierArc(from,to,n){
+  const[la1,lo1]=from,[la2,lo2]=to;
+  const mla=(la1+la2)/2,mlo=(lo1+lo2)/2;
+  const dx=lo2-lo1,dy=la2-la1,d=Math.sqrt(dx*dx+dy*dy);
+  const b=Math.min(d*0.25,15);
+  const nx=-dy/(d||1),ny=dx/(d||1);
+  const cla=mla+nx*b,clo=mlo+ny*b;
+  const pts=[];
+  for(let t=0;t<=1;t+=1/n){
+    pts.push([(1-t)*(1-t)*la1+2*(1-t)*t*cla+t*t*la2,(1-t)*(1-t)*lo1+2*(1-t)*t*clo+t*t*lo2]);
+  }
+  pts.push([la2,lo2]);
+  return pts;
+}
+
+function renderMigrations(){
+  MIGRATIONS.forEach(m=>{
+    if(!activeBranches.has(m.branch))return;
+    if(m.year&&m.year>currentYear)return;
+    if(aliveOnly){const ch=PEOPLE.find(p=>p.id===m.childId);if(ch&&!isAliveAtYear(ch))return}
+    const color=BRANCH_COLORS[m.branch]||'#888';
+    const pts=bezierArc([m.fromLat,m.fromLng],[m.toLat,m.toLng],40);
+    // Glow
+    L.polyline(pts,{color,weight:4,opacity:0.1,smoothFactor:1,lineCap:'round'}).addTo(migrationLayer);
+    // Feature 3: Animated draw-on effect via dashArray
+    const totalLen = estimateLen(pts);
+    const line = L.polyline(pts,{color,weight:1.8,opacity:0.55,smoothFactor:1,lineCap:'round',dashArray:null});
+    line.bindTooltip(
+      `<div class="popup-title">${m.fromName} → ${m.toName}</div>`+
+      `<div class="popup-sub">${m.fromPlace}</div>`+
+      `<div class="popup-sub">→ ${m.toPlace}</div>`+
+      (m.year?`<div class="popup-sub" style="margin-top:3px;color:var(--gold)">~${m.year}</div>`:''),
+      {sticky:true}
+    );
+    line.addTo(migrationLayer);
+    // Arrowhead
+    const n2=pts.length;
+    if(n2>=3){
+      const el=pts[n2-1][0],elo=pts[n2-1][1];
+      const pl=pts[n2-4]?.[0]||pts[n2-2][0],plo=pts[n2-4]?.[1]||pts[n2-2][1];
+      const ang=Math.atan2(el-pl,elo-plo);
+      const al=0.5;
+      L.polyline([[el,elo],[el-al*Math.cos(ang-0.4),elo-al*Math.sin(ang-0.4)]],{color,weight:1.5,opacity:0.55}).addTo(migrationLayer);
+      L.polyline([[el,elo],[el-al*Math.cos(ang+0.4),elo-al*Math.sin(ang+0.4)]],{color,weight:1.5,opacity:0.55}).addTo(migrationLayer);
+    }
+  });
+}
+
+function estimateLen(pts){let l=0;for(let i=1;i<pts.length;i++){const d=Math.sqrt((pts[i][0]-pts[i-1][0])**2+(pts[i][1]-pts[i-1][1])**2);l+=d}return l}
+
+function renderHeatOverlay(){
+  Object.values(locationGroups).forEach(loc=>{
+    const f=loc.people.filter(isPersonVisible);
+    if(!f.length)return;
+    const i=Math.min(f.length/12,1);
+    L.circleMarker([loc.lat,loc.lng],{radius:20+f.length*8,fillColor:'#c19a5b',fillOpacity:i*0.15,stroke:false}).addTo(markersLayer);
+  });
+}
+
+// ══════════════════════════════════════
+// SIDE PANEL
+// ══════════════════════════════════════
+function openPanel(loc,people){
+  const panel=document.getElementById('sidePanel');
+  document.getElementById('panelPlace').textContent=loc.place;
+  document.getElementById('panelCoords').textContent=loc.lat.toFixed(4)+'°N, '+Math.abs(loc.lng).toFixed(4)+'°'+(loc.lng>=0?'E':'W');
+  const sorted=[...people].sort((a,b)=>(a.birthYear||9999)-(b.birthYear||9999));
+  document.getElementById('panelBody').innerHTML=sorted.map(p=>{
+    const c=BRANCH_COLORS[p.branch]||'#888';
+    const alive=isAliveAtYear(p);
+    const yrs=p.alive?`b. ${p.birthYear||'?'} — living`:`${p.birthYear||'?'} — ${p.deathYear||'?'}`;
+    let det=[];
+    if(p.occupation)det.push(p.occupation);
+    if(p.military)det.push('⚔ '+p.military);
+    if(p.immigrationYear)det.push('🚢 Immigrated: '+p.immigrationYear);
+    if(p.deathPlace)det.push('✝ '+p.deathPlace);
+    const cls=alive?'person-card':'person-card deceased';
+    const hl=tracedPerson&&tracedPerson===p.id?'highlighted':'';
+    return `<div class="${cls} ${hl}" onclick="searchSelectPerson('${p.id}')">
+      <div class="person-name">${alive?'<span class="alive-dot"></span>':''}${p.name||'Unknown'}
+        <button class="trace-btn" onclick="event.stopPropagation();traceAncestors('${p.id}')">Trace</button>
+      </div>
+      <div class="person-dates">${yrs}</div>
+      ${det.length?'<div class="person-detail">'+det.join('<br>')+'</div>':''}
+      <span class="person-branch" style="color:${c};background:${c}15;border:1px solid ${c}30">${p.branch}</span>
+    </div>`;
+  }).join('');
+  panel.classList.add('open');
+}
+function closePanel(){document.getElementById('sidePanel').classList.remove('open')}
+
+// ══════════════════════════════════════
+// BRANCH FILTERS
+// ══════════════════════════════════════
+function buildBranchFilters(){
+  const c=document.getElementById('branchFilters');
+  const counts={};PEOPLE.forEach(p=>{counts[p.branch]=(counts[p.branch]||0)+1});
+  c.innerHTML='<button class="branch-btn active" style="color:var(--text);border-color:var(--text-muted)" onclick="toggleAllBranches(this)">All</button>';
+  Object.entries(BRANCH_COLORS).forEach(([b,color])=>{
+    const btn=document.createElement('button');
+    btn.className='branch-btn active';btn.style.color=color;btn.style.borderColor=color;
+    btn.textContent=`${b} (${counts[b]||0})`;btn.onclick=()=>toggleBranch(b,btn);
+    c.appendChild(btn);
+  });
+}
+function toggleBranch(b,btn){
+  if(activeBranches.has(b)){activeBranches.delete(b);btn.classList.remove('active');btn.style.borderColor='var(--border)'}
+  else{activeBranches.add(b);btn.classList.add('active');btn.style.borderColor=BRANCH_COLORS[b]}
+  render();
+}
+function toggleAllBranches(btn){
+  const all=activeBranches.size===Object.keys(BRANCH_COLORS).length;
+  const btns=document.querySelectorAll('.branch-btn');
+  if(all){activeBranches.clear();btns.forEach(b=>{b.classList.remove('active');b.style.borderColor='var(--border)'})}
+  else{Object.keys(BRANCH_COLORS).forEach(b=>activeBranches.add(b));btns.forEach(b=>{b.classList.add('active');const br=b.textContent.split(' (')[0];if(BRANCH_COLORS[br])b.style.borderColor=BRANCH_COLORS[br]})}
+  render();
+}
+function setView(v){currentView=v;document.querySelectorAll('.view-btn').forEach(b=>b.classList.toggle('active',b.dataset.view===v));render()}
+function toggleAliveOnly(){aliveOnly=!aliveOnly;document.getElementById('aliveToggle').classList.toggle('on',aliveOnly);render()}
+
+function buildLegend(){
+  const c=document.getElementById('legend');
+  const counts={};PEOPLE.forEach(p=>{counts[p.branch]=(counts[p.branch]||0)+1});
+  let h='<div class="legend-title">Family Branches</div>';
+  Object.entries(BRANCH_COLORS).forEach(([b,color])=>{
+    h+=`<div class="legend-row"><div class="legend-dot" style="background:${color}"></div><div class="legend-label">${b}</div><div class="legend-count">${counts[b]||0}</div></div>`;
+  });
+  c.innerHTML=h;
+}
+
+// ══════════════════════════════════════
+// FEATURE 2: Historical Event Markers
+// ══════════════════════════════════════
+function buildHistMarkers(){
+  const c=document.getElementById('histMarkers');
+  const minY=1400,maxY=2025,range=maxY-minY;
+  HISTORICAL_EVENTS.forEach(e=>{
+    const pct=((e.year-minY)/range)*100;
+    const d=document.createElement('div');
+    d.className='hist-dot';d.style.left=pct+'%';
+    d.innerHTML=`<div class="hist-dot-pip"></div><div class="hist-dot-label">${e.year} ${e.label}</div>`;
+    c.appendChild(d);
+  });
+}
+
+// ══════════════════════════════════════
+// TIMELINE
+// ══════════════════════════════════════
+const slider=document.getElementById('timelineSlider');
+slider.addEventListener('input',e=>{currentYear=parseInt(e.target.value);updateYearDisplay();render()});
+function updateYearDisplay(){
+  const el=document.getElementById('yearDisplay');
+  if(currentYear>=2025)el.innerHTML='All Time';
+  else el.innerHTML=`${currentYear}<small>AD</small>`;
+}
+function togglePlay(){
+  const btn=document.getElementById('playBtn');
+  if(isPlaying){clearInterval(playInterval);isPlaying=false;btn.innerHTML='&#9654; Play';btn.classList.remove('active');return}
+  isPlaying=true;btn.innerHTML='&#9646;&#9646; Pause';btn.classList.add('active');
+  if(currentYear>=2025){currentYear=1500;slider.value=1500}
+  if(!aliveOnly){aliveOnly=true;document.getElementById('aliveToggle').classList.add('on')}
+  playInterval=setInterval(()=>{
+    currentYear+=5;
+    if(currentYear>2025){currentYear=2025;clearInterval(playInterval);isPlaying=false;btn.innerHTML='&#9654; Play';btn.classList.remove('active')}
+    slider.value=currentYear;updateYearDisplay();render();
+  },180);
+}
+function resetTimeline(){
+  if(isPlaying)togglePlay();
+  if(storyActive)endStory();
+  currentYear=2025;slider.value=2025;
+  aliveOnly=false;document.getElementById('aliveToggle').classList.remove('on');
+  activeBranches=new Set(Object.keys(BRANCH_COLORS));
+  document.querySelectorAll('.branch-btn').forEach(b=>{b.classList.add('active');const br=b.textContent.split(' (')[0];if(BRANCH_COLORS[br])b.style.borderColor=BRANCH_COLORS[br]});
+  clearTrace();
+  updateYearDisplay();render();
+  map.flyTo([35,-20],3,{duration:1.5});
+}
+
+function updateStats(){
+  let vp=0,vl=0,vm=0;
+  Object.values(locationGroups).forEach(loc=>{const f=loc.people.filter(isPersonVisible);if(f.length>0){vl++;vp+=f.length}});
+  MIGRATIONS.forEach(m=>{
+    if(!activeBranches.has(m.branch))return;
+    if(m.year&&m.year>currentYear)return;
+    if(aliveOnly){const ch=PEOPLE.find(p=>p.id===m.childId);if(ch&&!isAliveAtYear(ch))return}
+    vm++;
+  });
+  document.getElementById('visibleCount').textContent=vp;
+  document.getElementById('locationCount').textContent=vl;
+  document.getElementById('migrationCount').textContent=vm;
+}
+
+// ══════════════════════════════════════
+// FEATURE 4: Stats Dashboard
+// ══════════════════════════════════════
+function updateStatsPanel(){
+  const born=PEOPLE.filter(p=>p.birthYear&&p.birthYear<=currentYear&&activeBranches.has(p.branch));
+  const living=born.filter(p=>isAliveAtYear(p));
+  const dead=born.filter(p=>!isAliveAtYear(p));
+  
+  document.getElementById('statsYear').textContent=currentYear>=2025?'Present':currentYear;
+  document.getElementById('statsLiving').textContent=living.length;
+  document.getElementById('statsDeceased').textContent=dead.length;
+  
+  // Countries
+  const countries=new Set();
+  living.forEach(p=>{if(p.birthCountry)countries.add(p.birthCountry)});
+  document.getElementById('statsCountries').textContent=countries.size;
+  
+  // Average lifespan of deceased with known ages
+  const lifespans=dead.filter(p=>p.birthYear&&p.deathYear).map(p=>p.deathYear-p.birthYear).filter(a=>a>0&&a<120);
+  const avg=lifespans.length?Math.round(lifespans.reduce((a,b)=>a+b,0)/lifespans.length):null;
+  document.getElementById('statsLifespan').textContent=avg?avg+' yrs':'—';
+  
+  // Mini bar: living by branch
+  const bar=document.getElementById('miniBar');
+  const brCounts={};living.forEach(p=>{brCounts[p.branch]=(brCounts[p.branch]||0)+1});
+  const total=living.length||1;
+  bar.innerHTML=Object.entries(BRANCH_COLORS).map(([b,c])=>{
+    const cnt=brCounts[b]||0;const w=(cnt/total*100);
+    return w>0?`<div class="mini-bar-seg" style="width:${w}%;background:${c}" title="${b}: ${cnt}"></div>`:'';
+  }).join('');
+  
+  // Geo bar: Europe vs Americas
+  const geoBar=document.getElementById('geoBar');
+  const geoLeg=document.getElementById('geoLegend');
+  let europe=0,americas=0,other=0;
+  living.forEach(p=>{
+    const c=p.birthCountry||'';
+    if(['England','Wales','Scotland','Ireland','Sweden','Norway','Germany','Netherlands','France'].some(x=>c.includes(x)))europe++;
+    else if(['United States','Canada'].some(x=>c.includes(x)))americas++;
+    else other++;
+  });
+  const gt=living.length||1;
+  geoBar.innerHTML=
+    (europe?`<div class="mini-bar-seg" style="width:${europe/gt*100}%;background:#5b8fb9" title="Europe: ${europe}"></div>`:'')+
+    (americas?`<div class="mini-bar-seg" style="width:${americas/gt*100}%;background:#5baa72" title="Americas: ${americas}"></div>`:'')+
+    (other?`<div class="mini-bar-seg" style="width:${other/gt*100}%;background:#7a8299" title="Other: ${other}"></div>`:'');
+  geoLeg.innerHTML=
+    `<span style="font-size:9px;color:#5b8fb9">● Europe ${europe}</span>`+
+    `<span style="font-size:9px;color:#5baa72">● Americas ${americas}</span>`+
+    (other?`<span style="font-size:9px;color:#7a8299">● Other ${other}</span>`:'');
+}
+
+// ══════════════════════════════════════
+// FEATURE 5: Person Search + Ancestor Trace
+// ══════════════════════════════════════
+const searchInput=document.getElementById('searchInput');
+const searchResults=document.getElementById('searchResults');
+
+searchInput.addEventListener('input',()=>{
+  const q=searchInput.value.trim().toLowerCase();
+  if(q.length<2){searchResults.classList.remove('open');return}
+  const matches=PEOPLE.filter(p=>(p.name||'').toLowerCase().includes(q)).slice(0,12);
+  if(!matches.length){searchResults.classList.remove('open');return}
+  searchResults.innerHTML=matches.map(p=>{
+    const c=BRANCH_COLORS[p.branch]||'#888';
+    return `<div class="search-item" onclick="searchSelectPerson('${p.id}')">
+      <div class="search-item-name" style="color:${c}">${p.name||'Unknown'}</div>
+      <div class="search-item-detail">${p.birthYear||'?'} — ${p.alive?'living':(p.deathYear||'?')} · ${p.birthPlace||'Unknown'} · ${p.branch}</div>
+    </div>`;
+  }).join('');
+  searchResults.classList.add('open');
+});
+
+searchInput.addEventListener('blur',()=>{setTimeout(()=>searchResults.classList.remove('open'),200)});
+searchInput.addEventListener('focus',()=>{if(searchInput.value.trim().length>=2)searchInput.dispatchEvent(new Event('input'))});
+
+function searchSelectPerson(pid){
+  searchResults.classList.remove('open');
+  searchInput.value='';
+  const p=ID_MAP[pid];
+  if(!p||!p.birthLat)return;
+  // Reset timeline to show this person
+  if(p.birthYear&&p.birthYear<=2025){
+    currentYear=2025;slider.value=2025;
+    aliveOnly=false;document.getElementById('aliveToggle').classList.remove('on');
+    updateYearDisplay();
+  }
+  // Fly to person
+  map.flyTo([p.birthLat,p.birthLng],8,{duration:1.5});
+  // Highlight with pulse
+  setTimeout(()=>{
+    const pulse=L.circleMarker([p.birthLat,p.birthLng],{radius:20,fillColor:BRANCH_COLORS[p.branch]||'#c19a5b',fillOpacity:0.4,color:BRANCH_COLORS[p.branch]||'#c19a5b',weight:2,opacity:0.8});
+    pulse.addTo(markersLayer);
+    // Animate pulse
+    let r=20;const pulseAnim=setInterval(()=>{r+=1.5;pulse.setRadius(r);pulse.setStyle({fillOpacity:Math.max(0,0.4-r/80),opacity:Math.max(0,0.8-r/60)});if(r>50){clearInterval(pulseAnim);markersLayer.removeLayer(pulse)}},30);
+    // Open location panel
+    const key=Math.round(p.birthLat*100)/100+','+Math.round(p.birthLng*100)/100;
+    const loc=locationGroups[key];
+    if(loc){tracedPerson=pid;openPanel(loc,loc.people.filter(isPersonVisible))}
+  },1600);
+  render();
+}
+
+function traceAncestors(pid){
+  traceLayer.clearLayers();
+  const chain=[];
+  const visited=new Set();
+  let cur=pid;
+  while(cur&&!visited.has(cur)){
+    visited.add(cur);
+    const p=ID_MAP[cur];
+    if(!p)break;
+    chain.push(p);
+    cur=p.fatherId||p.motherId;
+  }
+  if(chain.length<2){return}
+  tracedPerson=pid;
+  
+  // Draw trace lines
+  const tracePoints=chain.filter(p=>p.birthLat).map(p=>[p.birthLat,p.birthLng]);
+  for(let i=0;i<tracePoints.length-1;i++){
+    const pts=bezierArc(tracePoints[i],tracePoints[i+1],30);
+    // Glow
+    L.polyline(pts,{color:'#c19a5b',weight:5,opacity:0.15}).addTo(traceLayer);
+    // Line
+    L.polyline(pts,{color:'#c19a5b',weight:2.5,opacity:0.8,dashArray:'6 4'}).addTo(traceLayer);
+    // Dot at each ancestor
+    const anc=chain.filter(p=>p.birthLat)[i+1];
+    if(anc){
+      L.circleMarker([anc.birthLat,anc.birthLng],{radius:5,fillColor:'#c19a5b',fillOpacity:0.9,color:'#fff',weight:1,opacity:0.6}).bindTooltip(
+        `<div class="popup-title">${anc.name}</div><div class="popup-sub">${anc.birthYear||'?'} · ${anc.birthPlace||'?'}</div>`,
+        {direction:'top',offset:[0,-6]}
+      ).addTo(traceLayer);
+    }
+  }
+  // Start dot
+  const start=chain[0];
+  if(start&&start.birthLat){
+    L.circleMarker([start.birthLat,start.birthLng],{radius:7,fillColor:'#fff',fillOpacity:0.9,color:'#c19a5b',weight:2}).addTo(traceLayer);
+  }
+  
+  // Info panel
+  const geoChain=chain.filter(p=>p.birthLat);
+  const ti=document.getElementById('traceInfo');
+  document.getElementById('traceTitle').textContent=`${chain[0].name}'s Ancestry`;
+  let txt=`<strong>${geoChain.length} generations traced</strong><br>`;
+  const places=geoChain.map(p=>p.birthCity||p.birthState||p.birthCountry||'?');
+  const uniquePlaces=[...new Set(places)];
+  txt+=`From ${geoChain[geoChain.length-1].name} (${geoChain[geoChain.length-1].birthYear||'?'}, ${places[places.length-1]}) to ${geoChain[0].name} (${geoChain[0].birthYear||'?'}, ${places[0]})<br>`;
+  txt+=`Spanning ${uniquePlaces.length} distinct locations`;
+  document.getElementById('traceText').innerHTML=txt;
+  ti.classList.add('open');
+  
+  // Fit map to trace
+  if(tracePoints.length>1){
+    const bounds=L.latLngBounds(tracePoints);
+    map.flyToBounds(bounds,{padding:[80,80],duration:1.5,maxZoom:8});
+  }
+}
+
+function clearTrace(){
+  traceLayer.clearLayers();
+  tracedPerson=null;
+  document.getElementById('traceInfo').classList.remove('open');
+}
+
+// ══════════════════════════════════════
+// FEATURE 1: Guided Story Tour
+// ══════════════════════════════════════
+function startStory(){
+  if(isPlaying)togglePlay();
+  storyActive=true;storyIndex=0;
+  aliveOnly=true;document.getElementById('aliveToggle').classList.add('on');
+  document.getElementById('storyOverlay').classList.add('active');
+  // Build pips
+  document.getElementById('storyPips').innerHTML=STORY_CHAPTERS.map((_,i)=>`<div class="story-pip${i===0?' active':''}"></div>`).join('');
+  showStoryChapter();
+}
+function endStory(){
+  storyActive=false;
+  document.getElementById('storyOverlay').classList.remove('active');
+  document.getElementById('storyCard').classList.remove('visible');
+  document.getElementById('storyBtn').classList.remove('active');
+}
+function showStoryChapter(){
+  const ch=STORY_CHAPTERS[storyIndex];
+  const card=document.getElementById('storyCard');
+  card.classList.remove('visible');
+  
+  // Update branches
+  if(ch.branches){
+    activeBranches=new Set(ch.branches);
+    document.querySelectorAll('.branch-btn').forEach(b=>{
+      const br=b.textContent.split(' (')[0];
+      if(BRANCH_COLORS[br]){
+        const isActive=ch.branches.includes(br);
+        b.classList.toggle('active',isActive);
+        b.style.borderColor=isActive?BRANCH_COLORS[br]:'var(--border)';
+      }
+    });
+  } else {
+    activeBranches=new Set(Object.keys(BRANCH_COLORS));
+    document.querySelectorAll('.branch-btn').forEach(b=>{
+      b.classList.add('active');
+      const br=b.textContent.split(' (')[0];
+      if(BRANCH_COLORS[br])b.style.borderColor=BRANCH_COLORS[br];
+    });
+  }
+  
+  // Update timeline
+  currentYear=ch.year;slider.value=ch.year;updateYearDisplay();
+  render();
+  
+  // Fly map
+  map.flyTo([ch.lat,ch.lng],ch.zoom,{duration:2.0,easeLinearity:0.25});
+  
+  // Show card after fly
+  setTimeout(()=>{
+    document.getElementById('storyChapter').textContent=`Chapter ${storyIndex+1} of ${STORY_CHAPTERS.length}`;
+    document.getElementById('storyTitle').textContent=ch.title;
+    document.getElementById('storyText').textContent=ch.text;
+    document.getElementById('storyPrev').style.visibility=storyIndex===0?'hidden':'visible';
+    document.getElementById('storyNext').textContent=storyIndex===STORY_CHAPTERS.length-1?'Finish ✓':'Next →';
+    // Update pips
+    document.querySelectorAll('.story-pip').forEach((p,i)=>p.classList.toggle('active',i===storyIndex));
+    card.classList.add('visible');
+  },800);
+}
+function storyNext(){
+  if(storyIndex<STORY_CHAPTERS.length-1){storyIndex++;showStoryChapter()}
+  else{endStory();resetTimeline()}
+}
+function storyPrev(){
+  if(storyIndex>0){storyIndex--;showStoryChapter()}
+}
+
+// ══════════════════════════════════════
+// INIT
+// ══════════════════════════════════════
+// ══════════════════════════════════════
+// ASYNC STARTUP
+// ══════════════════════════════════════
+(async function() {
+  const success = await loadData();
+  if (!success) return;
+  buildIdMap();
+  initMap();
+})();
+</script>
+
+</body>
+</html>
