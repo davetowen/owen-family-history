@@ -76,7 +76,7 @@ select:focus,.filter-btn:focus{border-color:var(--accent);}
 .hist-point{color:#6a3a8b;}
 .hist-point .hist-event-label{background:rgba(106,58,139,0.12);}
 
-.life-row{position:absolute;height:32px;display:flex;align-items:center;cursor:pointer;transition:all 0.2s;z-index:10;}
+.life-row{position:absolute;height:34px;display:flex;align-items:center;cursor:pointer;transition:all 0.2s;z-index:10;}
 .life-row:hover{z-index:15;transform:translateY(-2px);}
 .life-row.dimmed{opacity:0.15;}
 .life-row.focused{opacity:1 !important;z-index:20;}
@@ -181,7 +181,7 @@ select:focus,.filter-btn:focus{border-color:var(--accent);}
       <button class="era-btn" onclick="scrollToEra(1840,1880)">Civil War</button>
       <button class="era-btn" onclick="scrollToEra(1900,1960)">World Wars</button>
       <button class="era-btn" onclick="scrollToEra(1950,2026)">Modern</button>
-      <button class="era-btn" onclick="scrollToEra(1250,2026)">Full Span</button>
+      <button class="era-btn" onclick="scrollToEra(1250,2030)">Full Span</button>
     </div>
     <div class="zoom-controls">
       <button class="zoom-btn" onclick="zoomTimeline(-1)">−</button>
@@ -331,7 +331,29 @@ async function init(){
     buildLegend();
     document.getElementById('loading').style.display = 'none';
     render();
-    setTimeout(function(){ scrollToEra(1580, 1700); }, 100);
+    
+    // Fit to width on initial load
+    setTimeout(function(){ 
+      var wrapper = document.getElementById('timelineWrapper');
+      var viewWidth = wrapper.clientWidth;
+      var totalYears = MAX_YEAR - MIN_YEAR; // 780 years
+      var neededPPY = (viewWidth - 100) / totalYears; // Leave some margin
+      
+      // Find closest zoom level
+      var bestIdx = 0, bestDiff = Infinity;
+      for(var i = 0; i < ZOOM_STEPS.length; i++){
+        var ppyr = BASE_PX_PER_YEAR * ZOOM_STEPS[i];
+        var diff = Math.abs(ppyr - neededPPY);
+        if(diff < bestDiff){ bestDiff = diff; bestIdx = i; }
+      }
+      
+      zoomIndex = bestIdx;
+      zoomLevel = ZOOM_STEPS[zoomIndex];
+      pxPerYear = BASE_PX_PER_YEAR * zoomLevel;
+      document.getElementById('zoomLabel').textContent = Math.round(zoomLevel*100)+'%';
+      render();
+      wrapper.scrollLeft = 0; // Start at beginning
+    }, 100);
     
   } catch (error) {
     console.error('Failed to load family data:', error);
