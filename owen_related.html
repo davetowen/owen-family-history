@@ -184,13 +184,44 @@ async function initRelationshipFinder() {
     setupSearch('searchA', 'dropdownA', 'selectedA', 'selectorA', 'A');
     setupSearch('searchB', 'dropdownB', 'selectedB', 'selectorB', 'B');
     
+    // Pre-select Aurora Mae Owen and Nora Ann Murphy
+    preSelectPeople();
+    
   } catch (error) {
     console.error('Failed to load family data:', error);
     document.querySelector('.main-container').innerHTML = '<p style="color:var(--danger);text-align:center;">Unable to load family data. Please refresh the page.</p>';
   }
 }
 
+function preSelectPeople() {
+  // Find Aurora Mae Owen
+  var aurora = PEOPLE.find(function(p) {
+    return p.firstName === 'Aurora' && p.lastName === 'Owen';
+  });
+  
+  // Find Nora Ann Murphy
+  var nora = PEOPLE.find(function(p) {
+    return p.firstName === 'Nora' && p.lastName === 'Murphy';
+  });
+  
+  if (aurora) selectPerson('A', aurora.id);
+  if (nora) selectPerson('B', nora.id);
+}
+
 function esc(s){var d=document.createElement('div');d.textContent=s;return d.innerHTML;}
+
+function formatDates(person) {
+  var parts = [];
+  if (person.birthYear) parts.push(person.birthYear);
+  
+  if (person.deathYear) {
+    parts.push(person.deathYear);
+  } else if (person.ageAtDeath === 'Alive') {
+    parts.push('present');
+  }
+  
+  return parts.join('–');
+}
 
 // ===== GRAPH BUILDING =====
 var graph = {};
@@ -368,7 +399,8 @@ function describeRelationship(path){
     } else if(ups === 2 && downs === 1 && hasSibling){
       relName = endPerson.gender==='M'?'uncle':'aunt';
     } else if(ups === downs && hasSibling){
-      var cousinDeg = ups - 1;
+      // Fix: cousin degree calculation
+      var cousinDeg = ups; // Should be ups, not ups - 1
       if(cousinDeg === 1) relName = 'first cousin';
       else if(cousinDeg === 2) relName = 'second cousin';
       else if(cousinDeg === 3) relName = 'third cousin';
@@ -376,7 +408,7 @@ function describeRelationship(path){
     } else if(hasSibling && ups !== downs){
       var minGen = Math.min(ups,downs);
       var diff = Math.abs(ups-downs);
-      var cousinD = minGen - 1;
+      var cousinD = minGen;
       if(cousinD >= 1){
         var cName = cousinD===1?'first':cousinD===2?'second':cousinD===3?'third':cousinD+'th';
         relName = cName + ' cousin ' + diff + '×removed';
@@ -425,7 +457,7 @@ function setupSearch(inputId, dropdownId, selectedId, selectorId, which){
       dropdown.innerHTML = '<div style="padding:0.8rem;color:var(--text-light);text-align:center;font-size:0.88rem;">No results</div>';
     } else {
       dropdown.innerHTML = results.map(function(p){
-        var dates = [p.birthYear, p.deathYear||(p.ageAtDeath==='Alive'?'present':'?')].filter(Boolean).join('–');
+        var dates = formatDates(p);
         var loc = [p.birthCity,p.birthState].filter(Boolean).join(', ');
         return '<div class="selector-option" data-id="'+p.id+'"><div class="opt-name">'+esc(p.fullName||p.firstName+' '+p.lastName)+'</div><div class="opt-meta">'+dates+(loc?' · '+loc:'')+(p.branchLineage?' · '+p.branchLineage:'')+'</div></div>';
       }).join('');
@@ -463,7 +495,7 @@ function selectPerson(which, personId){
   var selectedDiv = document.getElementById('selected'+which);
   var icon = person.gender==='M'?'👨':'👩';
   var iconCls = person.gender==='M'?'male':'female';
-  var dates = [person.birthYear, person.deathYear||(person.ageAtDeath==='Alive'?'present':'?')].filter(Boolean).join('–');
+  var dates = formatDates(person);
 
   selectedDiv.innerHTML = `
     <div class="sp-card">
@@ -551,7 +583,7 @@ function renderPath(path){
   for(var i=0;i<path.length;i++){
     var node = path[i];
     var person = peopleMap[node.id];
-    var dates = [person.birthYear, person.deathYear||(person.ageAtDeath==='Alive'?'present':'?')].filter(Boolean).join('–');
+    var dates = formatDates(person);
     var isEndpoint = i===0 || i===path.length-1;
     var side = i%2===0?'left':'right';
     var branch = person.branchLineage ? '<span class="pn-branch bp-'+person.branchLineage+'">'+person.branchLineage+'</span>' : '';
