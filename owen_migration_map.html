@@ -524,7 +524,10 @@ async function loadDataAndGeocode() {
   `;
   
   // Load data from Google Sheets
-  allPeople = loadEmbeddedData();
+  allPeople = PEOPLE.map(person => ({
+  ...person,
+  branch: person.branchLineage
+}));
   
   if (allPeople.length === 0) {
     document.getElementById('loading').style.display = 'none';
