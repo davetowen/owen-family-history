@@ -312,6 +312,7 @@ select:focus {
   }
 }
 </style>
+<script src="data-loader.js"></script>
 </head>
 <body>
 
@@ -329,7 +330,7 @@ select:focus {
   
   <div class="loading" id="loading">
     <div class="loading-spinner"></div>
-    <p>Loading family data...</p>
+    <p>Loading family data from Google Sheets...</p>
   </div>
   
   <div class="stats-panel">
@@ -403,17 +404,7 @@ select:focus {
 </div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="data-loader.js"></script>
 <script>
-// Wait for PEOPLE to be available
-function waitForData(callback) {
-  if (typeof PEOPLE !== 'undefined') {
-    callback();
-  } else {
-    setTimeout(() => waitForData(callback), 50);
-  }
-}
-
 let map;
 let markers = [];
 let allPeople = [];
@@ -489,36 +480,173 @@ function initMap() {
 }
 
 async function loadDataAndGeocode() {
-  document.getElementById('loading').innerHTML = `
-    <div class="loading-spinner"></div>
-    <p>Loading family data...</p>
-  `;
-  
-  allPeople = PEOPLE.map(person => ({
-    ...person,
-    branch: person.branchLineage
-  }));
-  
-  if (allPeople.length === 0) {
-    document.getElementById('loading').innerHTML = '<p>No data found</p>';
-    return;
+  try {
+    // Use the global owenFamilyDB instance from data-loader.js (SAME AS TREE PAGE)
+    const db = owenFamilyDB;
+    const data = await db.getData();
+    
+    if (!data.people || data.people.length === 0) {
+      throw new Error('No records returned from database');
+    }
+    
+    console.log('Migration map loaded: ' + data.people.length + ' people');
+    
+    // Map to allPeople array
+    allPeople = data.people.map(person => ({
+      ...person,
+      branch: person.branchLineage
+    }));
+    
+    document.getElementById('loading').innerHTML = `
+      <div class="loading-spinner"></div>
+      <p>Geocoding locations... This may take a few minutes.</p>
+      <p style="font-size: 0.85rem; margin-top: 0.5rem; color: var(--text-muted);">
+        Progress: <span id="geocodeProgress">0</span> / ${allPeople.length}
+      </p>
+    `;
+    
+    let geocoded = 0;
+    for (let person of allPeople) {
+      if (person.birthCity || person.birthCountry) {
+        const birthCoords = await geocodeLocation(
+          person.birthCity,
+          person.birthState,
+          person.birthCountry
+        );
+        if (birthCoords) {
+          person.birthLat = birthCoords.lat;
+          person.birthLng = birthCoords.lng;
+        }
+      }
+      
+      if (person.deathCity || person.deathCountry) {
+        const deathCoords = await geocodeLocation(
+          person.deathCity,
+          person.deathState,
+          person.deathCountry
+        );
+        if (deathCoords) {
+          person.deathLat = deathCoords.lat;
+          person.deathLng = deathCoords.lng;
+        }
+      }
+      
+      geocoded++;
+      document.getElementById('geocodeProgress').textContent = geocoded;
+    }
+    
+    document.getElementById('loading').style.display = 'none';
+    renderMap();
+    
+  } catch (error) {
+    console.error('Failed to load family data:', error);
+    document.getElementById('loading').innerHTML = `
+      <div>
+        <h2 style="color: var(--accent); margin-bottom: 0.5rem;">Unable to Load Family Data</h2>
+        <p>Could not connect to the Google Sheets database.</p>
+        <p style="font-size: 0.75rem; margin-top: 0.5rem; color: var(--text-muted);">${error.message}</p>
+        <button onclick="location.reload()" style="margin-top: 1rem; padding: 0.5rem 1rem; background: var(--accent); color: #fff; border: none; border-radius: 6px; cursor: pointer;">Retry</button>
+      </div>
+    `;
   }
+}
+
+function renderMap() {
+  markers.forEach(m => m.remove());
+  markers = [];
   
-  document.getElementById('loading').innerHTML = `
-    <div class="loading-spinner"></div>
-    <p>Geocoding locations... This may take a few minutes.</p>
-    <p style="font-size: 0.85rem; margin-top: 0.5rem; color: var(--text-muted);">
-      Progress: <span id="geocodeProgress">0</span> / ${allPeople.length}
-    </p>
-  `;
+  let filteredPeople = allPeople.filter(person => {
+    if (activeBranch !== 'all' && person.branch !== activeBranch) {
+      return false;
+    }
+    
+    if (activeTimeRange !== 'all') {
+      const [start, end] = activeTimeRange.split('-').map(Number);
+      const year = activeEvent === 'birth' ? parseInt(person.birthYear) : parseInt(person.deathYear);
+      if (!year || year < start || year > end) {
+        return false;
+      }
+    }
+    
+    return true;
+  });
   
-  let geocoded = 0;
-  for (let person of allPeople) {
-    if (person.birthCity || person.birthCountry) {
-      const birthCoords = await geocodeLocation(
-        person.birthCity,
-        person.birthState,
-        person.birthCountry
-      );
-      if (birthCoords) {
-        person.birthLat
+  const uniqueLocations = new Set();
+  const uniqueCountries = new Set();
+  
+  filteredPeople.forEach(person => {
+    if (activeEvent === 'all' || activeEvent === 'birth') {
+      if (person.birthLat) {
+        addMarker(person, 'birth');
+        uniqueLocations.add(`${person.birthLat},${person.birthLng}`);
+        if (person.birthCountry) uniqueCountries.add(person.birthCountry);
+      }
+    }
+    
+    if (activeEvent === 'all' || activeEvent === 'death') {
+      if (person.deathLat) {
+        addMarker(person, 'death');
+        uniqueLocations.add(`${person.deathLat},${person.deathLng}`);
+        if (person.deathCountry) uniqueCountries.add(person.deathCountry);
+      }
+    }
+  });
+  
+  updateStats(uniqueLocations.size, filteredPeople.length, uniqueCountries.size);
+}
+
+function addMarker(person, type) {
+  const lat = type === 'birth' ? person.birthLat : person.deathLat;
+  const lng = type === 'birth' ? person.birthLng : person.deathLng;
+  const place = type === 'birth' 
+    ? [person.birthCity, person.birthState, person.birthCountry].filter(x => x).join(', ')
+    : [person.deathCity, person.deathState, person.deathCountry].filter(x => x).join(', ');
+  const year = type === 'birth' ? person.birthYear : person.deathYear;
+  const color = type === 'birth' ? '#4a7c59' : '#8b3a3a';
+  
+  const marker = L.circleMarker([lat, lng], {
+    radius: 8,
+    fillColor: color,
+    color: '#fff',
+    weight: 2,
+    fillOpacity: 0.8
+  }).addTo(map);
+  
+  const name = [person.firstName, person.lastName].filter(x => x).join(' ');
+  
+  marker.bindPopup(`
+    <div class="popup-title">${name}</div>
+    <div class="popup-detail"><strong>${type === 'birth' ? 'Born' : 'Died'}:</strong> ${place}</div>
+    <div class="popup-detail"><strong>Year:</strong> ${year || 'Unknown'}</div>
+    ${person.branch ? `<div class="popup-detail"><strong>Branch:</strong> ${person.branch}</div>` : ''}
+  `);
+  
+  markers.push(marker);
+}
+
+function updateStats(locations, people, countries) {
+  document.getElementById('locationCount').textContent = locations || 0;
+  document.getElementById('peopleCount').textContent = people || 0;
+  document.getElementById('countryCount').textContent = countries || 0;
+}
+
+document.getElementById('branchFilter').addEventListener('change', (e) => {
+  activeBranch = e.target.value;
+  renderMap();
+});
+
+document.getElementById('eventFilter').addEventListener('change', (e) => {
+  activeEvent = e.target.value;
+  renderMap();
+});
+
+document.getElementById('timeFilter').addEventListener('change', (e) => {
+  activeTimeRange = e.target.value;
+  renderMap();
+});
+
+document.addEventListener('DOMContentLoaded', initMap);
+</script>
+
+</body>
+</html>
