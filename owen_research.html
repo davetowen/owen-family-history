@@ -194,7 +194,7 @@ body {
 }
 .quick-picks-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
   gap: 0.8rem;
 }
 .quick-pick-card {
@@ -711,7 +711,7 @@ body {
 
     <!-- QUICK PICKS -->
     <div class="quick-picks">
-      <div class="quick-picks-label">Quick Access</div>
+      <div class="quick-picks-label">Notable Family Members with Rich History</div>
       <div class="quick-picks-grid" id="quickPicks"></div>
     </div>
   </section>
@@ -749,23 +749,60 @@ async function initQuickPicks() {
     PEOPLE = data.people;
     PEOPLE.forEach(p => { peopleMap[p.id] = p; });
 
-    // Build quick picks - notable ancestors
-    const quickPicks = [
-      PEOPLE.find(p => p.id === 'per_001'), // Aurora
-      PEOPLE.find(p => p.id === 'per_027'), // Example - adjust IDs
-      PEOPLE.find(p => p.firstName === 'David' && p.lastName === 'Owen'),
-      PEOPLE.find(p => p.firstName === 'William' && p.lastName === 'Owen'),
-      PEOPLE.find(p => p.military && p.war?.includes('World War')),
-      PEOPLE.find(p => p.immigrationYear)
-    ].filter(Boolean).slice(0, 6);
+    // Build quick picks - score each person for "interestingness"
+    const scoredPeople = PEOPLE.map(p => {
+      let score = 0;
+      
+      // Points for having rich data
+      if (p.military) score += 10;
+      if (p.war) score += 5;
+      if (p.immigrationYear) score += 8;
+      if (p.occupation) score += 3;
+      if (p.notes && p.notes.length > 50) score += 7;
+      if (p.burialPlace) score += 2;
+      if (p.employers) score += 2;
+      if (p.undergradUniv) score += 3;
+      if (p.gradUniv) score += 3;
+      if (p.flyFishing) score += 2;
+      
+      // Points for being historically significant (older)
+      if (p.birthYear) {
+        if (p.birthYear < 1700) score += 15;
+        else if (p.birthYear < 1800) score += 10;
+        else if (p.birthYear < 1900) score += 5;
+      }
+      
+      // Points for early generations
+      if (p.generationNumber != null && p.generationNumber <= 5) score += 8;
+      
+      // Points for having complete family data
+      if (p.fatherId && p.motherId) score += 2;
+      if (p.spouseIds && p.spouseIds.length > 0) score += 2;
+      
+      return { person: p, score: score };
+    });
+    
+    // Sort by score and take top 8
+    const quickPicks = scoredPeople
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 8)
+      .map(item => item.person);
 
     const grid = document.getElementById('quickPicks');
-    grid.innerHTML = quickPicks.map(p => `
-      <div class="quick-pick-card" onclick="selectPerson('${p.id}')">
-        <div class="quick-pick-name">${escapeHtml(p.fullName || p.firstName + ' ' + p.lastName)}</div>
-        <div class="quick-pick-dates">${formatDates(p)}</div>
-      </div>
-    `).join('');
+    grid.innerHTML = quickPicks.map(p => {
+      const badges = [];
+      if (p.military) badges.push('🎖️ Military');
+      if (p.immigrationYear) badges.push('🛳️ Immigrant');
+      if (p.generationNumber != null && p.generationNumber <= 3) badges.push('🌳 Early Gen');
+      
+      return `
+        <div class="quick-pick-card" onclick="selectPerson('${p.id}')">
+          <div class="quick-pick-name">${escapeHtml(p.fullName || p.firstName + ' ' + p.lastName)}</div>
+          <div class="quick-pick-dates">${formatDates(p)}</div>
+          ${badges.length > 0 ? `<div style="font-size:0.7rem;margin-top:0.3rem;color:var(--accent)">${badges.join(' · ')}</div>` : ''}
+        </div>
+      `;
+    }).join('');
 
     // Setup search
     const searchInput = document.getElementById('searchInput');
@@ -844,6 +881,8 @@ function selectPerson(personId) {
   bodyHtml += '<h3 class="section-title">Basic Information</h3>';
   bodyHtml += '<div class="field-grid">';
   if (p.fullName) bodyHtml += fieldRow('Full Name', p.fullName);
+  if (p.title) bodyHtml += fieldRow('Title', p.title);
+  if (p.nickname) bodyHtml += fieldRow('Nickname', p.nickname);
   if (p.maidenName) bodyHtml += fieldRow('Maiden Name', p.maidenName);
   bodyHtml += fieldRow('Gender', p.gender === 'M' ? 'Male' : 'Female');
   if (p.birthYear) {
@@ -856,6 +895,10 @@ function selectPerson(personId) {
   }
   if (p.ageAtDeath && p.ageAtDeath !== 'Alive') bodyHtml += fieldRow('Age at Death', p.ageAtDeath);
   if (p.burialPlace) bodyHtml += fieldRow('Burial Place', p.burialPlace);
+  if (p.residenceCity || p.residenceState || p.residenceCountry) {
+    const resLoc = [p.residenceCity, p.residenceState, p.residenceCountry].filter(Boolean).join(', ');
+    bodyHtml += fieldRow('Current Residence', resLoc);
+  }
   bodyHtml += '</div></div>';
 
   // Family
@@ -870,30 +913,59 @@ function selectPerson(personId) {
     const m = peopleMap[p.motherId];
     bodyHtml += fieldRowLink('Mother', m.fullName || m.firstName + ' ' + m.lastName, m.id);
   }
+  if (p.stepParent) bodyHtml += fieldRow('Step Parent', p.stepParent);
   if (p.spouseIds?.length) {
     p.spouseIds.forEach(sid => {
       const sp = peopleMap[sid];
       if (sp) bodyHtml += fieldRowLink('Spouse', sp.fullName || sp.firstName + ' ' + sp.lastName, sp.id);
     });
   }
+  if (p.childrenIds?.length) {
+    bodyHtml += fieldRow('Children', p.childrenIds.length + ' child' + (p.childrenIds.length !== 1 ? 'ren' : ''));
+  }
+  if (p.siblingIds?.length) {
+    bodyHtml += fieldRow('Siblings', p.siblingIds.length + ' sibling' + (p.siblingIds.length !== 1 ? 's' : ''));
+  }
   if (p.generationNumber != null) bodyHtml += fieldRow('Generation', 'Gen ' + p.generationNumber + ' from Aurora');
+  if (p.relationship) bodyHtml += fieldRow('Relationship', p.relationship);
   bodyHtml += '</div></div>';
 
   // Life Details
-  if (p.occupation || p.employers || p.undergradUniv || p.military || p.immigrationYear) {
+  if (p.occupation || p.employers || p.undergradUniv || p.gradUniv || p.fraternity || p.sports || p.flyFishing || p.military || p.immigrationYear) {
     bodyHtml += '<div class="profile-section-block">';
     bodyHtml += '<h3 class="section-title">Life Details</h3>';
     bodyHtml += '<div class="field-grid">';
     if (p.occupation) bodyHtml += fieldRow('Occupation', p.occupation);
     if (p.employers) bodyHtml += fieldRow('Employers', p.employers);
-    if (p.undergradUniv) bodyHtml += fieldRow('Education', p.undergradUniv + (p.undergradYear ? ' (' + p.undergradYear + ')' : ''));
+    if (p.undergradUniv) bodyHtml += fieldRow('Undergraduate', p.undergradUniv + (p.undergradYear ? ' (' + p.undergradYear + ')' : ''));
+    if (p.gradUniv) bodyHtml += fieldRow('Graduate School', p.gradUniv + (p.gradYear ? ' (' + p.gradYear + ')' : ''));
+    if (p.fraternity) bodyHtml += fieldRow('Fraternity/Sorority', p.fraternity);
+    if (p.sports) bodyHtml += fieldRow('Sports', p.sports);
+    if (p.flyFishing) bodyHtml += fieldRow('Fly Fishing', p.flyFishing);
     if (p.immigrationYear) {
-      bodyHtml += '<div class="immigration-badge">🛳️ Immigrated to USA in ' + p.immigrationYear + '</div>';
+      bodyHtml += '<div class="immigration-badge" style="margin-top:0.5rem">🛳️ Immigrated to USA in ' + p.immigrationYear + '</div>';
     }
+    if (p.generationAmerican) bodyHtml += fieldRow('Generation American', p.generationAmerican);
     if (p.military) {
       const milDetails = [p.militaryBranch, p.war].filter(Boolean).join(' · ');
       const served = p.servedFrom ? `${p.servedFrom}–${p.servedTo || 'present'}` : '';
-      bodyHtml += `<div class="military-badge">🎖️ ${milDetails}${served ? ' (' + served + ')' : ''}</div>`;
+      bodyHtml += `<div class="military-badge" style="margin-top:0.5rem">🎖️ ${milDetails}${served ? ' (' + served + ')' : ''}</div>`;
+    }
+    bodyHtml += '</div></div>';
+  }
+
+  // Additional Information
+  if (p.photoLink || p.infoLink || p.dnaMatchId || p.confidence) {
+    bodyHtml += '<div class="profile-section-block">';
+    bodyHtml += '<h3 class="section-title">Additional Information</h3>';
+    bodyHtml += '<div class="field-grid">';
+    if (p.confidence) bodyHtml += fieldRow('Record Confidence', p.confidence);
+    if (p.dnaMatchId) bodyHtml += fieldRow('DNA Match ID', p.dnaMatchId);
+    if (p.photoLink) {
+      bodyHtml += `<div class="field-row"><span class="field-label">Photo/Document</span><span class="field-value"><a href="${p.photoLink}" target="_blank" style="color:var(--accent);text-decoration:underline">View Link</a></span></div>`;
+    }
+    if (p.infoLink) {
+      bodyHtml += `<div class="field-row"><span class="field-label">Information Link</span><span class="field-value"><a href="${p.infoLink}" target="_blank" style="color:var(--accent);text-decoration:underline">View Link</a></span></div>`;
     }
     bodyHtml += '</div></div>';
   }
@@ -901,7 +973,7 @@ function selectPerson(personId) {
   // Notes
   if (p.notes) {
     bodyHtml += '<div class="profile-section-block">';
-    bodyHtml += '<h3 class="section-title">Family Notes</h3>';
+    bodyHtml += '<h3 class="section-title">Family Notes & Stories</h3>';
     bodyHtml += `<div class="notes-box">${escapeHtml(p.notes)}</div>`;
     bodyHtml += '</div>';
   }
