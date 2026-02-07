@@ -411,13 +411,44 @@ let allPeople = [];
 let activeBranch = 'all';
 let activeEvent = 'all';
 let activeTimeRange = 'all';
-let geocodeCache = {};
+
+// OPTIMIZATION 1: localStorage cache
+const CACHE_KEY = 'owenFamilyGeoCache';
+const CACHE_VERSION = 'v1';
+
+function loadGeoCache() {
+  try {
+    const cached = localStorage.getItem(CACHE_KEY);
+    if (!cached) return {};
+    const data = JSON.parse(cached);
+    if (data.version !== CACHE_VERSION) return {};
+    return data.cache || {};
+  } catch (e) {
+    console.error('Cache load error:', e);
+    return {};
+  }
+}
+
+function saveGeoCache(cache) {
+  try {
+    localStorage.setItem(CACHE_KEY, JSON.stringify({
+      version: CACHE_VERSION,
+      cache: cache,
+      timestamp: Date.now()
+    }));
+  } catch (e) {
+    console.error('Cache save error:', e);
+  }
+}
+
+let geocodeCache = loadGeoCache();
 let lastGeocode = 0;
 const GEOCODE_DELAY = 1100;
 
 async function geocodeLocation(city, state, country) {
   const cacheKey = `${city}|${state}|${country}`.toLowerCase();
   
+  // Check cache first
   if (geocodeCache[cacheKey]) {
     return geocodeCache[cacheKey];
   }
@@ -457,6 +488,7 @@ async function geocodeLocation(city, state, country) {
         lng: parseFloat(data[0].lon)
       };
       
+      // Save to cache
       geocodeCache[cacheKey] = result;
       return result;
     }
@@ -481,7 +513,6 @@ function initMap() {
 
 async function loadDataAndGeocode() {
   try {
-    // Use the global owenFamilyDB instance from data-loader.js (SAME AS TREE PAGE)
     const db = owenFamilyDB;
     const data = await db.getData();
     
@@ -491,49 +522,110 @@ async function loadDataAndGeocode() {
     
     console.log('Migration map loaded: ' + data.people.length + ' people');
     
-    // Map to allPeople array
     allPeople = data.people.map(person => ({
       ...person,
       branch: person.branchLineage
     }));
     
-    document.getElementById('loading').innerHTML = `
-      <div class="loading-spinner"></div>
-      <p>Geocoding locations... This may take a few minutes.</p>
-      <p style="font-size: 0.85rem; margin-top: 0.5rem; color: var(--text-muted);">
-        Progress: <span id="geocodeProgress">0</span> / ${allPeople.length}
-      </p>
-    `;
+    // OPTIMIZATION 2: Deduplicate locations before geocoding
+    const uniqueLocations = new Map();
     
-    let geocoded = 0;
-    for (let person of allPeople) {
+    allPeople.forEach(person => {
+      // Birth location
       if (person.birthCity || person.birthCountry) {
-        const birthCoords = await geocodeLocation(
-          person.birthCity,
-          person.birthState,
-          person.birthCountry
-        );
-        if (birthCoords) {
-          person.birthLat = birthCoords.lat;
-          person.birthLng = birthCoords.lng;
+        const key = `${person.birthCity}|${person.birthState}|${person.birthCountry}`.toLowerCase();
+        if (!uniqueLocations.has(key)) {
+          uniqueLocations.set(key, {
+            city: person.birthCity,
+            state: person.birthState,
+            country: person.birthCountry,
+            type: 'birth'
+          });
         }
       }
       
+      // Death location
       if (person.deathCity || person.deathCountry) {
-        const deathCoords = await geocodeLocation(
-          person.deathCity,
-          person.deathState,
-          person.deathCountry
-        );
-        if (deathCoords) {
-          person.deathLat = deathCoords.lat;
-          person.deathLng = deathCoords.lng;
+        const key = `${person.deathCity}|${person.deathState}|${person.deathCountry}`.toLowerCase();
+        if (!uniqueLocations.has(key)) {
+          uniqueLocations.set(key, {
+            city: person.deathCity,
+            state: person.deathState,
+            country: person.deathCountry,
+            type: 'death'
+          });
+        }
+      }
+    });
+    
+    const totalUnique = uniqueLocations.size;
+    const alreadyCached = Array.from(uniqueLocations.keys()).filter(key => {
+      return geocodeCache[key] !== undefined;
+    }).length;
+    
+    console.log(`Locations: ${totalUnique} unique (${alreadyCached} cached, ${totalUnique - alreadyCached} need geocoding)`);
+    
+    if (totalUnique - alreadyCached === 0) {
+      document.getElementById('loading').innerHTML = `
+        <div class="loading-spinner"></div>
+        <p>Loading from cache... (instant!)</p>
+      `;
+    } else {
+      document.getElementById('loading').innerHTML = `
+        <div class="loading-spinner"></div>
+        <p>Geocoding ${totalUnique - alreadyCached} new locations...</p>
+        <p style="font-size: 0.85rem; margin-top: 0.5rem; color: var(--text-muted);">
+          Progress: <span id="geocodeProgress">0</span> / ${totalUnique - alreadyCached}
+        </p>
+        <p style="font-size: 0.75rem; margin-top: 0.5rem; color: var(--text-muted);">
+          Estimated time: ~${Math.ceil((totalUnique - alreadyCached) * 1.1 / 60)} minutes
+        </p>
+      `;
+    }
+    
+    // Geocode unique locations
+    let geocoded = 0;
+    for (const [key, loc] of uniqueLocations) {
+      const coords = await geocodeLocation(loc.city, loc.state, loc.country);
+      if (coords) {
+        // Store in cache with the key
+        geocodeCache[key] = coords;
+      }
+      
+      if (geocodeCache[key] === undefined) {
+        // Only increment for newly geocoded locations
+        geocoded++;
+        const progressEl = document.getElementById('geocodeProgress');
+        if (progressEl) progressEl.textContent = geocoded;
+      }
+    }
+    
+    // Save cache to localStorage
+    saveGeoCache(geocodeCache);
+    console.log('Geocoding cache saved to localStorage');
+    
+    // Now assign coordinates to all people
+    allPeople.forEach(person => {
+      // Birth
+      if (person.birthCity || person.birthCountry) {
+        const key = `${person.birthCity}|${person.birthState}|${person.birthCountry}`.toLowerCase();
+        const coords = geocodeCache[key];
+        if (coords) {
+          person.birthLat = coords.lat;
+          person.birthLng = coords.lng;
         }
       }
       
-      geocoded++;
-      document.getElementById('geocodeProgress').textContent = geocoded;
-    }
+      // Death
+      if (person.deathCity || person.deathCountry) {
+        const key = `${person.deathCity}|${person.deathState}|${person.deathCountry}`.toLowerCase();
+        const coords = geocodeCache[key];
+        if (coords) {
+          person.deathLat = coords.lat;
+          person.deathLng = coords.lng;
+        }
+      }
+    });
     
     document.getElementById('loading').style.display = 'none';
     renderMap();
