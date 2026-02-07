@@ -585,18 +585,25 @@ async function loadDataAndGeocode() {
     
     // Geocode unique locations
     let geocoded = 0;
+    const needsGeocoding = totalUnique - alreadyCached;
+    
     for (const [key, loc] of uniqueLocations) {
-      const coords = await geocodeLocation(loc.city, loc.state, loc.country);
-      if (coords) {
-        // Store in cache with the key
-        geocodeCache[key] = coords;
+      // Skip if already cached
+      if (geocodeCache[key] !== undefined) {
+        continue;
       }
       
-      if (geocodeCache[key] === undefined) {
-        // Only increment for newly geocoded locations
-        geocoded++;
-        const progressEl = document.getElementById('geocodeProgress');
-        if (progressEl) progressEl.textContent = geocoded;
+      // This location needs geocoding
+      const coords = await geocodeLocation(loc.city, loc.state, loc.country);
+      
+      geocoded++;
+      const progressEl = document.getElementById('geocodeProgress');
+      if (progressEl) progressEl.textContent = geocoded;
+      
+      // Save cache every 10 locations to avoid losing progress
+      if (geocoded % 10 === 0) {
+        saveGeoCache(geocodeCache);
+        console.log(`Progress saved: ${geocoded}/${needsGeocoding} locations geocoded`);
       }
     }
     
