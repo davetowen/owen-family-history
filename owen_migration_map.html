@@ -40,6 +40,12 @@ body {
   flex-direction: column;
 }
 
+.home-nav {
+  padding: 1rem 2rem;
+  background: var(--bg-card);
+  border-bottom: 1px solid var(--border);
+}
+
 .home-btn {
   display: inline-block;
   padding: 0.5rem 1rem;
@@ -211,4 +217,308 @@ select:focus {
   border: 1px solid var(--border);
   border-radius: 10px;
   padding: 0.8rem 1rem;
-  b
+  box-shadow: 0 4px 16px rgba(44,36,24,0.1);
+  display: flex;
+  gap: 1.5rem;
+}
+
+.stat-item {
+  text-align: center;
+}
+
+.stat-value {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--accent);
+  line-height: 1;
+}
+
+.stat-label {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-top: 0.2rem;
+}
+
+.leaflet-popup-content-wrapper {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0;
+}
+
+.leaflet-popup-content {
+  margin: 0;
+  padding: 1rem;
+  font-family: 'DM Sans', sans-serif;
+}
+
+.popup-title {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--accent);
+  margin-bottom: 0.5rem;
+}
+
+.popup-detail {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  margin-bottom: 0.3rem;
+}
+
+.loading {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+  z-index: 2000;
+  background: var(--bg-card);
+  padding: 2rem;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+}
+
+.loading-spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid var(--border);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  margin: 0 auto 1rem;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+@media (max-width: 768px) {
+  .map-controls {
+    max-width: 200px;
+    padding: 0.8rem;
+  }
+  
+  .stats-panel {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  
+  .site-title {
+    font-size: 1.8rem;
+  }
+}
+</style>
+</head>
+<body>
+
+<div class="home-nav"><a href="index.html" class="home-btn">← Return to Home</a></div>
+
+<header class="site-header">
+  <div class="header-content">
+    <h1 class="site-title">Owen Family <span>Migration Map</span></h1>
+    <p class="site-subtitle">Trace family movements across continents and generations</p>
+  </div>
+</header>
+
+<div class="map-container">
+  <div id="map"></div>
+  
+  <div class="loading" id="loading">
+    <div class="loading-spinner"></div>
+    <p>Loading family data...</p>
+  </div>
+  
+  <div class="stats-panel">
+    <div class="stat-item">
+      <div class="stat-value" id="locationCount">0</div>
+      <div class="stat-label">Locations</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-value" id="peopleCount">0</div>
+      <div class="stat-label">People</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-value" id="countryCount">0</div>
+      <div class="stat-label">Countries</div>
+    </div>
+  </div>
+  
+  <div class="map-controls">
+    <div class="controls-title">Filters</div>
+    
+    <div class="control-group">
+      <label class="control-label">Branch</label>
+      <select id="branchFilter">
+        <option value="all">All Branches</option>
+        <option value="Owen">Owen</option>
+        <option value="Bonnie">Bonnie</option>
+        <option value="Lunde">Lunde</option>
+        <option value="Murphy">Murphy</option>
+      </select>
+    </div>
+    
+    <div class="control-group">
+      <label class="control-label">Event Type</label>
+      <select id="eventFilter">
+        <option value="all">All Events</option>
+        <option value="birth">Births</option>
+        <option value="death">Deaths</option>
+        <option value="residence">Residences</option>
+      </select>
+    </div>
+    
+    <div class="control-group">
+      <label class="control-label">Time Period</label>
+      <select id="timeFilter">
+        <option value="all">All Years</option>
+        <option value="1200-1500">1200-1500</option>
+        <option value="1500-1700">1500-1700</option>
+        <option value="1700-1800">1700-1800</option>
+        <option value="1800-1900">1800-1900</option>
+        <option value="1900-2000">1900-2000</option>
+        <option value="2000-2025">2000-2025</option>
+      </select>
+    </div>
+  </div>
+  
+  <div class="map-legend">
+    <div class="legend-title">Legend</div>
+    <div class="legend-item">
+      <div class="legend-marker marker-birth"></div>
+      <span>Birth Location</span>
+    </div>
+    <div class="legend-item">
+      <div class="legend-marker marker-death"></div>
+      <span>Death Location</span>
+    </div>
+    <div class="legend-item">
+      <div class="legend-marker marker-residence"></div>
+      <span>Residence</span>
+    </div>
+  </div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="data-loader.js"></script>
+<script>
+// Wait for PEOPLE to be available
+function waitForData(callback) {
+  if (typeof PEOPLE !== 'undefined') {
+    callback();
+  } else {
+    setTimeout(() => waitForData(callback), 50);
+  }
+}
+
+let map;
+let markers = [];
+let allPeople = [];
+let activeBranch = 'all';
+let activeEvent = 'all';
+let activeTimeRange = 'all';
+let geocodeCache = {};
+let lastGeocode = 0;
+const GEOCODE_DELAY = 1100;
+
+async function geocodeLocation(city, state, country) {
+  const cacheKey = `${city}|${state}|${country}`.toLowerCase();
+  
+  if (geocodeCache[cacheKey]) {
+    return geocodeCache[cacheKey];
+  }
+  
+  let query = [];
+  if (city && city !== 'Unknown') query.push(city);
+  if (state && state !== 'Unknown') query.push(state);
+  if (country && country !== 'Unknown') query.push(country);
+  
+  if (query.length === 0) return null;
+  
+  const searchQuery = query.join(', ');
+  
+  const now = Date.now();
+  const timeSinceLastRequest = now - lastGeocode;
+  if (timeSinceLastRequest < GEOCODE_DELAY) {
+    await new Promise(resolve => setTimeout(resolve, GEOCODE_DELAY - timeSinceLastRequest));
+  }
+  
+  try {
+    const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchQuery)}&limit=1`;
+    const response = await fetch(url, {
+      headers: {
+        'User-Agent': 'Owen Family History Website'
+      }
+    });
+    
+    lastGeocode = Date.now();
+    
+    if (!response.ok) return null;
+    
+    const data = await response.json();
+    
+    if (data && data.length > 0) {
+      const result = {
+        lat: parseFloat(data[0].lat),
+        lng: parseFloat(data[0].lon)
+      };
+      
+      geocodeCache[cacheKey] = result;
+      return result;
+    }
+  } catch (error) {
+    console.error('Geocoding error:', error);
+  }
+  
+  geocodeCache[cacheKey] = null;
+  return null;
+}
+
+function initMap() {
+  map = L.map('map').setView([40, -20], 3);
+  
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '© OpenStreetMap contributors',
+    maxZoom: 18
+  }).addTo(map);
+  
+  loadDataAndGeocode();
+}
+
+async function loadDataAndGeocode() {
+  document.getElementById('loading').innerHTML = `
+    <div class="loading-spinner"></div>
+    <p>Loading family data...</p>
+  `;
+  
+  allPeople = PEOPLE.map(person => ({
+    ...person,
+    branch: person.branchLineage
+  }));
+  
+  if (allPeople.length === 0) {
+    document.getElementById('loading').innerHTML = '<p>No data found</p>';
+    return;
+  }
+  
+  document.getElementById('loading').innerHTML = `
+    <div class="loading-spinner"></div>
+    <p>Geocoding locations... This may take a few minutes.</p>
+    <p style="font-size: 0.85rem; margin-top: 0.5rem; color: var(--text-muted);">
+      Progress: <span id="geocodeProgress">0</span> / ${allPeople.length}
+    </p>
+  `;
+  
+  let geocoded = 0;
+  for (let person of allPeople) {
+    if (person.birthCity || person.birthCountry) {
+      const birthCoords = await geocodeLocation(
+        person.birthCity,
+        person.birthState,
+        person.birthCountry
+      );
+      if (birthCoords) {
+        person.birthLat
