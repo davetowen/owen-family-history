@@ -65,7 +65,8 @@ html, body { height: 100%; overflow: hidden; }
 .toolbar .finder input { box-shadow: var(--shadow); border-color: transparent; }
 .ctrl { display: flex; align-items: center; gap: 2px; background: var(--card); border-radius: 12px; box-shadow: var(--shadow); padding: 4px; font: 500 13.5px var(--ui); }
 .ctrl .lbl { padding: 0 8px 0 10px; color: var(--ink-soft); white-space: nowrap; }
-.ctrl .val { min-width: 22px; text-align: center; font-weight: 600; font-variant-numeric: tabular-nums; }
+.ctrl button.all { width: auto; padding: 0 9px; font: 600 12.5px var(--ui); }
+.ctrl .val { min-width: 26px; text-align: center; font-weight: 600; font-variant-numeric: tabular-nums; }
 .ctrl button { border: 0; background: transparent; width: 34px; height: 34px; border-radius: 9px; cursor: pointer; font-size: 18px; line-height: 1; }
 .ctrl button:hover { background: var(--paper-deep); }
 .ctrl button:disabled { opacity: .3; cursor: default; background: transparent; }
@@ -185,7 +186,7 @@ dialog .row { display: flex; gap: 8px; justify-content: flex-end; margin-top: 16
     </div>
     <div class="ctrl gens" role="group" aria-label="Tree settings">
       <span class="lbl">Ancestors</span>
-      <button type="button" id="anc-minus" aria-label="Fewer ancestor generations">−</button><span class="val" id="anc-val">4</span><button type="button" id="anc-plus" aria-label="More ancestor generations">+</button>
+      <button type="button" id="anc-minus" aria-label="Fewer ancestor generations">−</button><span class="val" id="anc-val">4</span><button type="button" id="anc-plus" aria-label="More ancestor generations">+</button><button type="button" id="anc-all" class="all" aria-label="Show every generation of ancestors">All</button>
       <span class="sep"></span>
       <span class="lbl">Descendants</span>
       <button type="button" id="desc-minus" aria-label="Fewer descendant generations">−</button><span class="val" id="desc-val">2</span><button type="button" id="desc-plus" aria-label="More descendant generations">+</button>
@@ -244,10 +245,11 @@ O.nav('tree');
 /* ---------- settings ---------- */
 const S = {
   focus: null,
-  anc: clampInt(O.store.get('tree.anc'), 1, 10, 4),
+  anc: clampInt(O.store.get('tree.anc'), 1, 40, 4),
   desc: clampInt(O.store.get('tree.desc'), 0, 5, 2),
   sibs: O.store.get('tree.sibs') !== '0'
 };
+function focusDepth() { if (!S.focus) return 40; let d = 0; O.ancestorsWithDepth(S.focus).forEach(v => d = Math.max(d, v)); return Math.max(1, d); }
 function clampInt(v, lo, hi, d) { const n = parseInt(v, 10); return Number.isFinite(n) ? Math.min(hi, Math.max(lo, n)) : d; }
 
 /* ---------- sizes ---------- */
@@ -614,14 +616,18 @@ document.getElementById('zme').onclick = () => { const n = current.nodes.find(n 
 const ancVal = document.getElementById('anc-val'), descVal = document.getElementById('desc-val');
 function syncControls() {
   ancVal.textContent = S.anc; descVal.textContent = S.desc;
-  document.getElementById('anc-minus').disabled = S.anc <= 1; document.getElementById('anc-plus').disabled = S.anc >= 10;
+  const deep = focusDepth();
+  ancVal.textContent = S.anc >= deep ? 'All' : S.anc;
+  document.getElementById('anc-minus').disabled = S.anc <= 1; document.getElementById('anc-plus').disabled = S.anc >= deep;
+  document.getElementById('anc-all').disabled = S.anc >= deep;
   document.getElementById('desc-minus').disabled = S.desc <= 0; document.getElementById('desc-plus').disabled = S.desc >= 5;
   document.getElementById('sibs').checked = S.sibs;
   O.store.set('tree.anc', S.anc); O.store.set('tree.desc', S.desc); O.store.set('tree.sibs', S.sibs ? '1' : '0');
 }
 const bump = (k, d, lo, hi) => () => { S[k] = Math.min(hi, Math.max(lo, S[k] + d)); syncControls(); render(null, false); setTimeout(() => firstView(true), 30); };
-document.getElementById('anc-minus').onclick = bump('anc', -1, 1, 10);
-document.getElementById('anc-plus').onclick = bump('anc', 1, 1, 10);
+document.getElementById('anc-minus').onclick = () => { if (S.anc > focusDepth()) S.anc = focusDepth(); bump('anc', -1, 1, 40)(); };
+document.getElementById('anc-plus').onclick = bump('anc', 1, 1, 40);
+document.getElementById('anc-all').onclick = () => { S.anc = 40; syncControls(); render(null, false); setTimeout(() => firstView(true), 30); };
 document.getElementById('desc-minus').onclick = bump('desc', -1, 0, 5);
 document.getElementById('desc-plus').onclick = bump('desc', 1, 0, 5);
 document.getElementById('sibs').onchange = e => { S.sibs = e.target.checked; syncControls(); render(null, false); };
@@ -647,6 +653,7 @@ function route() {
   if (!target) return;
   const first = !S.focus;
   S.focus = target;
+  syncControls();
   O.store.set('tree.last', target);
   document.title = `${O.displayName(P[target])} · Family Tree · Owen Family`;
   openPanel(target, innerWidth <= 820);
