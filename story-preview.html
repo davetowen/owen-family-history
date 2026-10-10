@@ -913,7 +913,7 @@ async function commonsPhotos(placeTxt, year, terms) {
   for (const u of tries) {
     const d = await (await fetch(u)).json();
     const pages = Object.values((d.query && d.query.pages) || {});
-    const imgs = pages.map(pg => pg.imageinfo && pg.imageinfo[0]).filter(ii => ii && ii.thumburl && /\.(jpe?g|png)$/i.test(ii.url))
+    const imgs = pages.map(pg => pg.imageinfo && pg.imageinfo[0]).filter(ii => ii && ii.thumburl && /\.(jpe?g|png)$/i.test(ii.url.split('?')[0]) && !/logo|icon|map|flag|seal|coat.of.arms|signature/i.test(ii.url.split('?')[0]))
       .map(ii => {
         const m = ii.extmetadata || {}, strip = s => (s || '').replace(/<[^>]+>/g, '').trim();
         return { src: ii.thumburl, page: ii.descriptionurl, title: strip(m.ObjectName && m.ObjectName.value) || '', credit: [strip(m.Artist && m.Artist.value), strip(m.LicenseShortName && m.LicenseShortName.value)].filter(Boolean).join(' · ') };
@@ -923,7 +923,7 @@ async function commonsPhotos(placeTxt, year, terms) {
   return [];
 }
 function playReel(reel, photos) {
-  reel.innerHTML = photos.map((ph, i) => `<img src="${esc(ph.src)}" alt="${esc(ph.title || 'Historic photo')}" loading="lazy" class="${i === 0 ? 'on' : ''}">`).join('') + `<a class="credit" href="${esc(photos[0].page)}" target="_blank" rel="noopener"></a>`;
+  reel.innerHTML = photos.map((ph, i) => `<img src="${esc(ph.src)}" alt="${esc(ph.title || 'Historic photo')}" class="${i === 0 ? 'on' : ''}">`).join('') + `<a class="credit" href="${esc(photos[0].page)}" target="_blank" rel="noopener"></a>`;
   const imgs = [...reel.querySelectorAll('img')], credit = reel.querySelector('.credit');
   let i = 0;
   const show = () => { imgs.forEach((im, j) => im.classList.toggle('on', j === i)); credit.textContent = [photos[i].title, photos[i].credit, 'Wikimedia Commons'].filter(Boolean).join(' · '); credit.href = photos[i].page; };
