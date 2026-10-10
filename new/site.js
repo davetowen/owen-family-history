@@ -175,7 +175,7 @@
     ['timeline.html', 'Timeline', 'Lives against the sweep of history', 'timeline'],
     ['statistics.html', 'Statistics', 'The family in numbers', 'statistics'],
     ['research.html', 'Research desk', 'Gaps, open questions and sources', 'research'],
-    ['../index.html', 'The original site', 'The first version, kept as it was', 'classic']
+    ['../classic.html', 'The original site', 'The first version, kept as it was', 'classic']
   ];
   function nav(current) {
     const el = document.createElement('header');
