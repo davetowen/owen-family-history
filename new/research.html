@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Research Desk · Owen Family</title>
+<meta name="description" content="Open questions, unconfirmed details and gaps in the Owen family records. Help get it right.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:ital,opsz,wght@0,6..96,400..800;1,6..96,400..700&family=Newsreader:ital,opsz,wght@0,6..72,400..600;1,6..72,400&family=Instrument+Sans:wght@400..600&family=Caveat:wght@500&display=swap">
+<link rel="stylesheet" href="site.css">
+<style>
+.wrap { max-width: var(--maxw); margin: 0 auto; padding: 0 var(--gutter) 80px; }
+h1 { font: 500 clamp(40px, 7vw, 76px)/1 var(--display); margin: 48px 0 10px; letter-spacing: -.02em; }
+.lede { font-size: 19px; color: var(--ink-soft); max-width: 58ch; margin: 0 0 26px; }
+.summary { display: grid; grid-template-columns: 1.3fr repeat(4, 1fr); gap: 12px; margin-bottom: 26px; }
+@media (max-width: 900px) { .summary { grid-template-columns: 1fr 1fr; } .summary .conf-card { grid-column: 1 / -1; } }
+.summary > div { background: var(--card); border-radius: 16px; box-shadow: var(--shadow); padding: 16px; }
+.summary b { font: 500 34px/1 var(--display); display: block; }
+.summary span { font: 13px var(--ui); color: var(--ink-soft); }
+.confbar { display: flex; height: 14px; border-radius: 7px; overflow: hidden; margin: 12px 0 8px; background: var(--paper-deep); }
+.confbar i { display: block; height: 100%; }
+.conflegend { display: flex; gap: 12px; flex-wrap: wrap; font: 12.5px var(--ui); color: var(--ink-soft); }
+.conflegend .swatch { margin-right: 5px; }
+.filters { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 14px; position: sticky; top: var(--nav-h); background: var(--paper); padding: 10px 0; z-index: 10; }
+.filters .chip[aria-pressed="true"] { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+.filters .chip .y { color: inherit; opacity: .7; }
+.filters .spacer { flex: 1; }
+.filters input { font: 15px var(--ui); padding: 8px 12px; border: 1.5px solid var(--rule); border-radius: 10px; background: var(--card); min-width: 200px; }
+.items { display: grid; grid-template-columns: repeat(auto-fill, minmax(330px, 1fr)); gap: 12px; }
+.item { position: relative; background: var(--card); border-radius: 16px; box-shadow: var(--shadow); padding: 14px 16px 14px 22px; display: flex; flex-direction: column; gap: 6px; }
+.item::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 6px; background: var(--c); border-radius: 16px 0 0 16px; }
+.item .who { font: 600 17px/1.25 var(--body); }
+.item .who a { text-decoration: none; }
+.item .who a:hover { text-decoration: underline; }
+.item .meta { font: 13px var(--ui); color: var(--ink-soft); }
+.item .issue { font-size: 15px; line-height: 1.45; }
+.item .kind { font: 600 11px var(--ui); letter-spacing: .06em; text-transform: uppercase; color: var(--margin-ink); }
+.item .acts { display: flex; gap: 6px; flex-wrap: wrap; margin-top: auto; padding-top: 6px; }
+.empty { color: var(--ink-soft); padding: 30px 0; }
+.foot { margin-top: 26px; font: 13px var(--ui); color: var(--ink-soft); }
+</style>
+</head>
+<body>
+<main class="wrap">
+  <h1>Research desk</h1>
+  <p class="lede">Nobody’s family records are perfect. Here is everything we’re unsure about, with automatic checks that flag dates that don’t add up. If you know the answer, tap <b>I know this</b>.</p>
+  <div class="summary" id="summary"></div>
+  <div class="filters" id="filters"></div>
+  <div class="items" id="items"></div>
+  <p class="foot">The checks run live on the family sheet every time this page loads. <button class="chip" type="button" id="csv">Download this list (CSV)</button></p>
+</main>
+<script src="../data-loader.js"></script>
+<script src="site.js"></script>
+<script>
+(() => {
+'use strict';
+const O = Owen, { esc, P } = O;
+O.nav('research');
+
+const KINDS = [
+  ['question', 'Open questions'], ['check', 'Dates that don’t add up'], ['low', 'Unconfirmed people'],
+  ['parents', 'Missing parents'], ['dates', 'Missing dates'], ['places', 'Missing birthplaces']
+];
+let ITEMS = [], kind = 'question', q = '';
+
+function build() {
+  const out = [];
+  const add = (p, k, text) => out.push({ p, k, text });
+  O.PEOPLE.forEach(p => {
+    if (p.reviewQuestions) add(p, 'question', p.reviewQuestions);
+    if (p.dataConfidence === 'Low') add(p, 'low', p.confidenceReason || 'Details unconfirmed.');
+    // automatic checks against parents
+    const [f, m] = O.parentsOf(p.id);
+    if (p.birthYear) {
+      if (f && P[f].birthYear) { const a = p.birthYear - P[f].birthYear; if (a < 15) add(p, 'check', `Born when father ${O.shortName(P[f])} was ${a}.`); if (a > 75) add(p, 'check', `Born when father ${O.shortName(P[f])} would have been ${a}.`); }
+      if (m && P[m].birthYear) { const a = p.birthYear - P[m].birthYear; if (a < 13) add(p, 'check', `Born when mother ${O.shortName(P[m])} was ${a}.`); if (a > 55) add(p, 'check', `Born when mother ${O.shortName(P[m])} would have been ${a}.`); }
+      if (m && P[m].deathYear && p.birthYear > P[m].deathYear) add(p, 'check', `Born ${p.birthYear}, after mother ${O.shortName(P[m])} died in ${P[m].deathYear}.`);
+      if (f && P[f].deathYear && p.birthYear > P[f].deathYear + 1) add(p, 'check', `Born ${p.birthYear}, more than a year after father ${O.shortName(P[f])} died in ${P[f].deathYear}.`);
+    }
+    if (p.birthYear && p.deathYear && p.deathYear < p.birthYear) add(p, 'check', `Death year ${p.deathYear} is before birth year ${p.birthYear}.`);
+    if (p.birthYear && p.deathYear && p.deathYear - p.birthYear > 105) add(p, 'check', `Would have lived to ${p.deathYear - p.birthYear}.`);
+    if (p.alive && p.birthYear && new Date().getFullYear() - p.birthYear > 105) add(p, 'check', `Marked living but born in ${p.birthYear}.`);
+    // gaps
+    const hasKids = O.childrenOf(p.id).length > 0;
+    if (!f && !m && O.siblingsOf(p.id).length === 0) { /* earliest on record: not a gap */ }
+    else if (!f || !m) add(p, 'parents', `${!f && !m ? 'Neither parent' : !f ? 'Father' : 'Mother'} not recorded.`);
+    if (!p.birthYear) add(p, 'dates', 'Birth year unknown.');
+    else if (!p.alive && !p.deathYear && new Date().getFullYear() - p.birthYear > 100) add(p, 'dates', 'Death year unknown.');
+    if (!O.place(p)) add(p, 'places', 'Birthplace unknown.');
+  });
+  return out;
+}
+
+function summary() {
+  const n = O.PEOPLE.length, c = { High: 0, Medium: 0, Low: 0, '': 0 };
+  O.PEOPLE.forEach(p => c[p.dataConfidence || '']++);
+  const col = { High: '#2E7D4A', Medium: '#C9930B', Low: '#B4462B', '': '#C9C4BA' };
+  const lab = { High: 'Well documented', Medium: 'Mostly confirmed', Low: 'Unconfirmed', '': 'Not rated' };
+  const cnt = k => ITEMS.filter(i => i.k === k).length;
+  document.getElementById('summary').innerHTML = `
+    <div class="conf-card"><span>How sure are we about ${n} people?</span>
+      <div class="confbar">${Object.keys(c).filter(k => c[k]).map(k => `<i style="width:${c[k] / n * 100}%;background:${col[k]}" title="${lab[k]}: ${c[k]}"></i>`).join('')}</div>
+      <div class="conflegend">${Object.keys(c).filter(k => c[k]).map(k => `<span><span class="swatch" style="background:${col[k]}"></span>${lab[k]} ${c[k]}</span>`).join('')}</div></div>
+    <div><b>${cnt('question')}</b><span>open questions</span></div>
+    <div><b>${cnt('check')}</b><span>dates that don’t add up</span></div>
+    <div><b>${cnt('parents')}</b><span>missing a parent</span></div>
+    <div><b>${cnt('places')}</b><span>birthplace unknown</span></div>`;
+}
+
+function filters() {
+  document.getElementById('filters').innerHTML = KINDS.map(([k, t]) => `<button class="chip" type="button" data-k="${k}" aria-pressed="${k === kind}">${t}<span class="y">${ITEMS.filter(i => i.k === k).length}</span></button>`).join('')
+    + `<span class="spacer"></span><input type="search" id="q" placeholder="Filter by name or family…" value="${esc(q)}" aria-label="Filter">`;
+  document.querySelectorAll('[data-k]').forEach(b => b.onclick = () => { kind = b.dataset.k; filters(); list(); });
+  const qi = document.getElementById('q'); qi.oninput = () => { q = qi.value; list(); };
+}
+
+function visible() {
+  const t = O.norm(q);
+  return ITEMS.filter(i => i.k === kind && (!t || O.norm([O.displayName(i.p), i.p.maidenName, O.familyLabel(O.familyKey(i.p), i.p)].join(' ')).includes(t)))
+    .sort((a, b) => O.byBirth(a.p, b.p));
+}
+function list() {
+  const items = visible(), kt = KINDS.find(k => k[0] === kind)[1];
+  document.getElementById('items').innerHTML = items.length ? items.map(i => {
+    const p = i.p;
+    return `<div class="item" style="--c:${O.colorOf(p)}"><span class="kind">${esc(kt)}</span>
+      <div class="who"><a href="tree.html#${p.id}">${esc(O.displayName(p))}</a></div>
+      <div class="meta">${esc(O.years(p))}${O.place(p) ? ' · ' + esc(O.place(p)) : ''} · ${esc(O.familyLabel(O.familyKey(p), p))} family</div>
+      <div class="issue">${esc(i.text)}</div>
+      <div class="acts"><a class="btn small" href="tree.html#${p.id}">Open in the tree</a><a class="btn small ghost" href="mailto:?subject=${encodeURIComponent('Owen family: ' + O.displayName(p) + ' (' + p.id + ')')}&body=${encodeURIComponent(i.text + '\n\nWhat I know: ')}">I know this</a></div></div>`;
+  }).join('') : `<p class="empty">Nothing here${q ? ' matching that filter' : ''}. 🎉</p>`;
+}
+
+document.getElementById('csv').onclick = () => {
+  const rows = [['Person ID', 'Name', 'Years', 'Issue type', 'Issue']].concat(ITEMS.map(i => [i.p.id, O.displayName(i.p), O.years(i.p), KINDS.find(k => k[0] === i.k)[1], i.text]));
+  const csv = rows.map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(',')).join('\n');
+  const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' })); a.download = 'owen-research-list.csv'; a.click();
+};
+
+O.load().then(() => {
+  ITEMS = build();
+  const h = location.hash.slice(1); if (KINDS.some(k => k[0] === h)) kind = h;
+  summary(); filters(); list();
+});
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Timeline · Owen Family</title>
+<meta name="description" content="Every life in the Owen family drawn against the events of their time.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:ital,opsz,wght@0,6..96,400..800;1,6..96,400..700&family=Newsreader:ital,opsz,wght@0,6..72,400..600;1,6..72,400&family=Instrument+Sans:wght@400..600&family=Caveat:wght@500&display=swap">
+<link rel="stylesheet" href="site.css">
+<style>
+.wrap { max-width: 1400px; margin: 0 auto; padding: 0 var(--gutter) 80px; }
+h1 { font: 500 clamp(40px, 7vw, 76px)/1 var(--display); margin: 48px 0 10px; letter-spacing: -.02em; }
+.lede { font-size: 19px; color: var(--ink-soft); max-width: 56ch; margin: 0 0 22px; }
+.controls { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 10px; }
+.controls .seg { display: flex; background: var(--card); border-radius: 12px; box-shadow: var(--shadow); padding: 4px; }
+.controls .seg button { border: 0; background: transparent; padding: 7px 12px; border-radius: 9px; font: 600 13.5px var(--ui); cursor: pointer; color: var(--ink-soft); white-space: nowrap; }
+.controls .seg button[aria-pressed="true"] { background: var(--ink); color: var(--paper); }
+.controls label { font: 500 14px var(--ui); display: flex; gap: 6px; align-items: center; margin-left: 6px; }
+.famchips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 16px; }
+.famchips .chip[aria-pressed="false"] { opacity: .4; }
+.chart { position: relative; background: var(--card); border-radius: 18px; box-shadow: var(--shadow); padding: 0 16px 20px; }
+.axis { position: sticky; top: var(--nav-h); z-index: 6; background: var(--card); height: 108px; border-bottom: 1px solid var(--rule); margin: 0 -16px; padding: 0 16px; border-radius: 18px 18px 0 0; }
+.axis .inner { position: relative; height: 100%; margin-left: var(--lab); }
+.axis .tick { position: absolute; bottom: 4px; font: 12px var(--ui); color: var(--ink-soft); transform: translateX(-50%); font-variant-numeric: tabular-nums; }
+.axis .ev { position: absolute; font: 500 11px/1.2 var(--ui); color: var(--margin-ink); white-space: nowrap; transform: translateX(-4px); padding-left: 6px; border-left: 1.5px solid var(--margin-ink); }
+.rows { position: relative; margin-left: var(--lab); }
+.evline { position: absolute; top: 0; bottom: 0; width: 0; border-left: 1px dashed color-mix(in oklab, var(--margin-ink) 45%, transparent); pointer-events: none; }
+.decade { position: absolute; top: 0; bottom: 0; width: 0; border-left: 1px solid color-mix(in oklab, var(--rule) 55%, transparent); pointer-events: none; }
+.grp { position: relative; height: 34px; }
+.grp span { position: absolute; left: calc(-1 * var(--lab)); bottom: 4px; font: 600 13px var(--ui); display: flex; gap: 7px; align-items: center; }
+.row { position: relative; height: 19px; }
+.row .nm { position: absolute; left: calc(-1 * var(--lab)); width: calc(var(--lab) - 12px); top: 1px; font: 12.5px/17px var(--ui); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--ink-soft); text-align: right; }
+.row .bar { position: absolute; top: 4px; height: 11px; border-radius: 4px; background: var(--c); cursor: pointer; min-width: 4px; }
+.row .bar.est { background: linear-gradient(90deg, var(--c) 70%, color-mix(in oklab, var(--c) 25%, transparent)); }
+.row .bar.alive { background: linear-gradient(90deg, var(--c) 85%, color-mix(in oklab, var(--c) 55%, white)); }
+.row:hover .nm { color: var(--ink); font-weight: 600; }
+.row:hover .bar { box-shadow: 0 0 0 2px var(--card), 0 0 0 3.5px var(--c); }
+.tip { position: fixed; z-index: 80; pointer-events: none; background: var(--ink); color: var(--paper); font: 13px/1.4 var(--ui); padding: 7px 10px; border-radius: 8px; box-shadow: var(--shadow-lift); max-width: 280px; }
+.legend-note { font: 13px var(--ui); color: var(--ink-soft); margin: 12px 0 0; }
+@media (max-width: 700px) { .chart { --lab: 110px !important; } .axis .ev { font-size: 10px; } }
+</style>
+</head>
+<body>
+<main class="wrap">
+  <h1>Timeline</h1>
+  <p class="lede">Every life we know of, drawn against the events of its time. Hover for details; click anyone to open them in the tree.</p>
+  <div class="controls">
+    <div class="seg" id="eras" role="group" aria-label="Time period"></div>
+    <div class="seg" id="sort" role="group" aria-label="Group by">
+      <button type="button" data-s="line" aria-pressed="true">By family line</button>
+      <button type="button" data-s="birth" aria-pressed="false">By birth year</button>
+    </div>
+    <label><input type="checkbox" id="evs" checked> World events</label>
+  </div>
+  <div class="famchips" id="fams"></div>
+  <div class="chart" id="chart" style="--lab: 200px">
+    <div class="axis"><div class="inner" id="axis"></div></div>
+    <div class="rows" id="rows"></div>
+  </div>
+  <p class="legend-note">Faded bar ends mean the death year is unknown and the length is a guess. A pale tip means the person is living.</p>
+</main>
+<div class="tip" id="tip" hidden></div>
+<script src="../data-loader.js"></script>
+<script src="site.js"></script>
+<script>
+(() => {
+'use strict';
+const O = Owen, { esc, P } = O;
+O.nav('timeline');
+const NOW = new Date().getFullYear();
+const HISTORY = [
+  [1348, 'The Black Death'], [1415, 'Agincourt'], [1485, 'Bosworth Field'], [1534, 'England breaks with Rome'], [1588, 'The Spanish Armada'],
+  [1620, 'The Mayflower lands'], [1642, 'English Civil War'], [1675, 'King Philip’s War'], [1707, 'Great Britain formed'], [1746, 'Culloden'], [1776, 'Declaration of Independence'],
+  [1812, 'War of 1812'], [1825, 'Erie Canal opens'], [1845, 'Irish Famine'], [1849, 'Gold Rush'], [1861, 'Civil War begins'], [1869, 'Transcontinental railroad'],
+  [1880, 'Scandinavian emigration peaks'], [1905, 'Saskatchewan founded'], [1914, 'First World War'], [1918, 'Influenza pandemic'], [1929, 'Great Depression'],
+  [1941, 'U.S. enters WWII'], [1950, 'Korean War'], [1969, 'Moon landing'], [1989, 'Berlin Wall falls'], [2001, 'September 11'], [2020, 'COVID-19 pandemic']
+];
+const ERAS = [['All', null, null], ['Before 1700', null, 1700], ['1700–1900', 1680, 1910], ['1900–today', 1880, NOW + 2]];
+const S = { era: 0, sort: 'line', evs: true, fams: null };
+
+function rowsData() {
+  return O.PEOPLE.filter(p => p.birthYear && (!S.fams || S.fams.has(O.familyKey(p)))).map(p => {
+    const end = p.alive ? NOW : p.deathYear || null;
+    return { p, a: p.birthYear, b: end || Math.min(NOW, p.birthYear + 60), est: !end && !p.alive };
+  });
+}
+function draw() {
+  const data = rowsData();
+  if (!data.length) { document.getElementById('rows').innerHTML = '<p style="padding:20px">No one to show.</p>'; return; }
+  const [, e0, e1] = ERAS[S.era];
+  const minY = Math.min(...data.map(d => d.a));
+  const y0 = e0 ?? Math.floor(minY / 50) * 50, y1 = e1 ?? NOW + 3;
+  const vis = data.filter(d => d.b >= y0 && d.a <= y1);
+  const x = y => ((Math.max(y0, Math.min(y1, y)) - y0) / (y1 - y0)) * 100;
+  // axis ticks
+  const span = y1 - y0, step = span > 500 ? 100 : span > 220 ? 50 : 20;
+  const ticks = []; for (let t = Math.ceil(y0 / step) * step; t <= y1; t += step) ticks.push(t);
+  // event labels in three lanes so they don't overlap
+  const evs = S.evs ? HISTORY.filter(([y]) => y >= y0 && y <= y1) : [];
+  const lanes = [-Infinity, -Infinity, -Infinity, -Infinity], laneOf = [];
+  const W = document.getElementById('rows').clientWidth || 900;
+  evs.forEach(([y, t]) => { const px = x(y) / 100 * W, w = t.length * 6 + 16; const l = lanes.findIndex(end => end < px); if (l >= 0) lanes[l] = px + w; laneOf.push(l); });   // -1 = no room: line only
+  document.getElementById('axis').innerHTML = ticks.map(t => `<span class="tick" style="left:${x(t)}%">${t}</span>`).join('')
+    + evs.map(([y, t], i) => laneOf[i] < 0 ? '' : `<span class="ev" style="left:${x(y)}%;top:${6 + laneOf[i] * 19}px" title="${y}">${esc(t)}</span>`).join('');
+  // rows
+  let html = ticks.map(t => `<div class="decade" style="left:${x(t)}%"></div>`).join('') + evs.map(([y]) => `<div class="evline" style="left:${x(y)}%"></div>`).join('');
+  const rowHtml = d => `<div class="row" data-id="${d.p.id}"><span class="nm">${esc(O.shortName(d.p))}</span><span class="bar${d.est ? ' est' : ''}${d.p.alive ? ' alive' : ''}" style="--c:${O.colorOf(d.p)};left:${x(d.a)}%;width:${Math.max(.3, x(d.b) - x(d.a))}%"></span></div>`;
+  if (S.sort === 'line') {
+    const groups = {}; vis.forEach(d => { const k = O.familyKey(d.p) || 'other'; (groups[k] = groups[k] || []).push(d); });
+    Object.entries(groups).sort((a, b) => b[1].length - a[1].length).forEach(([k, list]) => {
+      html += `<div class="grp"><span><span class="swatch" style="background:${O.familyColor(k)}"></span>${esc(O.familyLabel(k, list[0].p))} <span style="font-weight:400;color:var(--ink-soft)">${list.length}</span></span></div>`;
+      html += list.sort((a, b) => a.a - b.a).map(rowHtml).join('');
+    });
+  } else html += vis.sort((a, b) => a.a - b.a).map(rowHtml).join('');
+  document.getElementById('rows').innerHTML = html;
+}
+function controls() {
+  document.getElementById('eras').innerHTML = ERAS.map(([t], i) => `<button type="button" data-e="${i}" aria-pressed="${i === S.era}">${t}</button>`).join('');
+  document.querySelectorAll('[data-e]').forEach(b => b.onclick = () => { S.era = +b.dataset.e; controls(); draw(); });
+  document.querySelectorAll('[data-s]').forEach(b => { b.setAttribute('aria-pressed', b.dataset.s === S.sort); b.onclick = () => { S.sort = b.dataset.s; controls(); draw(); }; });
+  const fams = {}; O.PEOPLE.forEach(p => { const k = O.familyKey(p); if (k && p.birthYear) fams[k] = (fams[k] || 0) + 1; });
+  document.getElementById('fams').innerHTML = Object.entries(fams).filter(([, v]) => v >= 3).sort((a, b) => b[1] - a[1]).map(([k, v]) => `<button class="chip" type="button" data-f="${k}" aria-pressed="${!S.fams || S.fams.has(k)}"><span class="swatch" style="background:${O.familyColor(k)}"></span>${esc(O.familyLabel(k))}<span class="y">${v}</span></button>`).join('')
+    + (S.fams ? ' <button class="chip" type="button" id="fall">Show all</button>' : '');
+  document.querySelectorAll('[data-f]').forEach(b => b.onclick = () => { const k = b.dataset.f; if (!S.fams) S.fams = new Set([k]); else if (S.fams.has(k)) { S.fams.delete(k); if (!S.fams.size) S.fams = null; } else S.fams.add(k); controls(); draw(); });
+  const fa = document.getElementById('fall'); if (fa) fa.onclick = () => { S.fams = null; controls(); draw(); };
+}
+document.getElementById('evs').onchange = e => { S.evs = e.target.checked; draw(); };
+const tip = document.getElementById('tip');
+document.getElementById('rows').addEventListener('pointermove', e => {
+  const r = e.target.closest('.row'); if (!r) { tip.hidden = true; return; }
+  const p = P[r.dataset.id];
+  tip.innerHTML = `<b>${esc(O.displayName(p))}</b><br>${esc(O.years(p))}${O.place(p) ? '<br>Born in ' + esc(O.place(p)) : ''}`;
+  tip.hidden = false; tip.style.left = Math.min(innerWidth - tip.offsetWidth - 8, e.clientX + 14) + 'px'; tip.style.top = (e.clientY + 14) + 'px';
+});
+document.getElementById('rows').addEventListener('pointerleave', () => tip.hidden = true);
+document.getElementById('rows').addEventListener('click', e => { const r = e.target.closest('.row'); if (r) location.href = 'tree.html#' + r.dataset.id; });
+addEventListener('resize', () => draw());
+O.load().then(people => { if (people.length) { controls(); draw(); } });
+})();
+</script>
+</body>
+</html>

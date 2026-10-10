@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Statistics · Owen Family</title>
+<meta name="description" content="The Owen family in numbers: births by century, lifespans, family lines, countries and names, live from the family sheet.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:ital,opsz,wght@0,6..96,400..800;1,6..96,400..700&family=Newsreader:ital,opsz,wght@0,6..72,400..600;1,6..72,400&family=Instrument+Sans:wght@400..600&family=Caveat:wght@500&display=swap">
+<link rel="stylesheet" href="site.css">
+<style>
+.wrap { max-width: var(--maxw); margin: 0 auto; padding: 0 var(--gutter) 80px; }
+h1 { font: 500 clamp(40px, 7vw, 76px)/1 var(--display); margin: 48px 0 10px; letter-spacing: -.02em; }
+.lede { font-size: 19px; color: var(--ink-soft); max-width: 56ch; margin: 0 0 28px; }
+.hero { display: grid; grid-template-columns: repeat(6, 1fr); gap: 12px; margin-bottom: 26px; }
+@media (max-width: 900px) { .hero { grid-template-columns: repeat(3, 1fr); } }
+@media (max-width: 480px) { .hero { grid-template-columns: repeat(2, 1fr); } }
+.hero div { background: var(--card); border-radius: 16px; box-shadow: var(--shadow); padding: 16px; }
+.hero b { font: 500 38px/1 var(--display); display: block; font-variant-numeric: lining-nums; }
+.hero span { font: 13px var(--ui); color: var(--ink-soft); }
+.grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+@media (max-width: 860px) { .grid { grid-template-columns: 1fr; } }
+.card { background: var(--card); border-radius: 18px; box-shadow: var(--shadow); padding: 20px 22px; min-width: 0; }
+.card h2 { font: 500 24px/1.15 var(--display); margin: 0 0 4px; }
+.card .note { font: 13.5px var(--ui); color: var(--ink-soft); margin: 0 0 16px; }
+.card.wide { grid-column: 1 / -1; }
+/* vertical bars */
+.vbars { display: flex; align-items: flex-end; gap: 6px; height: 200px; padding-bottom: 24px; position: relative; border-bottom: 1px solid var(--rule); }
+.vbars .b { flex: 1; position: relative; display: flex; flex-direction: column; justify-content: flex-end; height: 100%; }
+.vbars .b i { display: block; background: var(--bar, #8A4B2A); border-radius: 4px 4px 0 0; min-height: 2px; transition: opacity .15s; }
+.vbars .b:hover i { opacity: .75; }
+.vbars .b .v { font: 600 11.5px var(--ui); color: var(--ink-soft); text-align: center; margin-bottom: 4px; font-variant-numeric: tabular-nums; }
+.vbars .b .x { position: absolute; bottom: -22px; left: 50%; transform: translateX(-50%); font: 11.5px var(--ui); color: var(--ink-soft); white-space: nowrap; }
+/* horizontal bars */
+.hbars { display: grid; grid-template-columns: max-content 1fr max-content; gap: 6px 12px; align-items: center; font: 14px var(--ui); }
+.hbars .l { white-space: nowrap; display: flex; align-items: center; gap: 7px; }
+.hbars .t { height: 14px; background: var(--paper-deep); border-radius: 0 4px 4px 0; overflow: hidden; }
+.hbars .t i { display: block; height: 100%; border-radius: 0 4px 4px 0; background: var(--bar, #8A4B2A); }
+.hbars .n { font-variant-numeric: tabular-nums; color: var(--ink-soft); text-align: right; }
+.hbars a { text-decoration: none; }
+.hbars a:hover { text-decoration: underline; }
+.names { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+.names h3 { font: 600 12.5px var(--ui); letter-spacing: .07em; text-transform: uppercase; color: var(--ink-soft); margin: 0 0 8px; }
+.tip { position: fixed; z-index: 80; pointer-events: none; background: var(--ink); color: var(--paper); font: 13px/1.4 var(--ui); padding: 7px 10px; border-radius: 8px; box-shadow: var(--shadow-lift); }
+details.table { margin-top: 12px; font: 13px var(--ui); color: var(--ink-soft); }
+details.table table { border-collapse: collapse; margin-top: 8px; }
+details.table td, details.table th { padding: 3px 10px 3px 0; text-align: left; font-variant-numeric: tabular-nums; }
+</style>
+</head>
+<body>
+<main class="wrap">
+  <h1>The family in numbers</h1>
+  <p class="lede" id="lede">Everything here is counted live from the family sheet each time the page loads, so it updates as the records do.</p>
+  <div class="hero" id="hero"></div>
+  <div class="grid" id="grid"></div>
+</main>
+<div class="tip" id="tip" hidden></div>
+<script src="../data-loader.js"></script>
+<script src="site.js"></script>
+<script>
+(() => {
+'use strict';
+const O = Owen, { esc, P } = O;
+O.nav('statistics');
+const ACCENT = '#8A4B2A';
+
+function vbars(rows, fmt = v => v, color = ACCENT) {
+  const max = Math.max(...rows.map(r => r[1]), 1);
+  return `<div class="vbars" style="--bar:${color}">${rows.map(([x, v, tip]) => `<div class="b" data-tip="${esc(tip || `${x}: ${fmt(v)}`)}"><span class="v">${v ? fmt(v) : ''}</span><i style="height:${v / max * 150}px"></i><span class="x">${esc(x)}</span></div>`).join('')}</div>`;
+}
+function hbars(rows, color = ACCENT) {
+  const max = Math.max(...rows.map(r => r[1]), 1);
+  return `<div class="hbars">${rows.map(([l, v, c, href]) => `<span class="l">${c ? `<span class="swatch" style="background:${c}"></span>` : ''}${href ? `<a href="${href}">${esc(l)}</a>` : esc(l)}</span><span class="t"><i style="width:${v / max * 100}%;background:${c || color}"></i></span><span class="n">${v}</span>`).join('')}</div>`;
+}
+function table(head, rows) {
+  return `<details class="table"><summary>Show as a table</summary><table><tr>${head.map(h => `<th>${esc(h)}</th>`).join('')}</tr>${rows.map(r => `<tr>${r.map(c => `<td>${esc(c)}</td>`).join('')}</tr>`).join('')}</table></details>`;
+}
+const card = (title, note, inner, wide) => `<section class="card${wide ? ' wide' : ''}"><h2>${esc(title)}</h2><p class="note">${esc(note)}</p>${inner}</section>`;
+const count = (arr, key) => { const m = {}; arr.forEach(x => { const k = key(x); if (k) m[k] = (m[k] || 0) + 1; }); return Object.entries(m).sort((a, b) => b[1] - a[1]); };
+
+function render(people) {
+  const born = people.filter(p => p.birthYear);
+  const lives = people.filter(p => p.birthYear && p.deathYear && p.deathYear >= p.birthYear);
+  const countries = count(people, p => (p.birthCountry || '').trim());
+  const gens = (() => { let best = 0; people.forEach(p => O.ancestorsWithDepth(p.id).forEach(v => best = Math.max(best, v))); return best + 1; })();
+  const avgLife = lives.length ? Math.round(lives.reduce((s, p) => s + (p.deathYear - p.birthYear), 0) / lives.length) : 0;
+  const served = people.filter(p => p.war || (p.military && !/^no$/i.test(p.military)));
+  document.getElementById('hero').innerHTML = [[people.length, 'people'], [gens, 'generations'], [countries.length, 'countries of birth'], [Math.min(...born.map(p => p.birthYear)), 'earliest birth'], [avgLife, 'average lifespan'], [served.length, 'served in the military']]
+    .map(([n, l]) => `<div><b>${n}</b><span>${l}</span></div>`).join('');
+
+  // births by century
+  const byC = {}; born.forEach(p => { const c = Math.floor(p.birthYear / 100) * 100; byC[c] = (byC[c] || 0) + 1; });
+  const cs = Object.keys(byC).map(Number).sort((a, b) => a - b);
+  const cRows = cs.map(c => [`${c}s`, byC[c], `${byC[c]} people born in the ${c}s`]);
+  // lifespan by century of birth
+  const lc = {}; lives.forEach(p => { const c = Math.floor(p.birthYear / 100) * 100; (lc[c] = lc[c] || []).push(p.deathYear - p.birthYear); });
+  const lRows = Object.keys(lc).map(Number).sort((a, b) => a - b).filter(c => lc[c].length >= 2).map(c => { const a = Math.round(lc[c].reduce((s, v) => s + v, 0) / lc[c].length); return [`${c}s`, a, `Born in the ${c}s: lived ${a} years on average (${lc[c].length} people)`]; });
+  // family lines
+  const fams = count(people, p => O.familyKey(p)).slice(0, 14).map(([k, v]) => {
+    const oldest = people.filter(p => O.familyKey(p) === k && p.birthYear).sort(O.byBirth)[0];
+    return [O.familyLabel(k), v, O.familyColor(k), oldest ? `tree.html#${oldest.id}` : null];
+  });
+  // names
+  const firstNames = sex => count(people.filter(p => p.gender === sex), p => (p.firstName || '').trim().split(/\s+/)[0]).slice(0, 8);
+  // wars
+  const wars = count(served, p => p.war ? (/war/i.test(p.war) ? p.war : p.war + ' War') : 'Service, war not recorded');
+  // longest lives
+  const longest = lives.slice().sort((a, b) => (b.deathYear - b.birthYear) - (a.deathYear - a.birthYear)).slice(0, 8)
+    .map(p => [`${O.shortName(p)} (${p.birthYear}–${p.deathYear})`, p.deathYear - p.birthYear, O.colorOf(p), `tree.html#${p.id}`]);
+
+  document.getElementById('grid').innerHTML =
+    card('Births by century', 'How many people in the records were born in each century.', vbars(cRows) + table(['Century', 'People born'], cs.map(c => [`${c}s`, byC[c]])), true) +
+    card('How long they lived', 'Average lifespan by century of birth, for people with both dates recorded.', vbars(lRows, v => v) + table(['Century of birth', 'Average years', 'People'], Object.keys(lc).sort().filter(c => lc[c].length >= 2).map(c => [`${c}s`, Math.round(lc[c].reduce((s, v) => s + v, 0) / lc[c].length), lc[c].length]))) +
+    card('Where we were born', 'Country of birth.', hbars(countries.slice(0, 10).map(([c, v]) => [c, v]))) +
+    card('The biggest family lines', 'People per surname line (maiden names for women). Tap a line to meet its earliest ancestor.', hbars(fams)) +
+    card('The longest lives', 'Tap a name to open them in the tree.', hbars(longest)) +
+    card('Favourite first names', 'The most common first names across six centuries.', `<div class="names"><div><h3>Men</h3>${hbars(firstNames('M'))}</div><div><h3>Women</h3>${hbars(firstNames('F'))}</div></div>`) +
+    card('Served their country', 'Family members with military service recorded.', hbars(wars));
+
+  document.getElementById('lede').textContent = `${people.length} people, counted live from the family sheet. Every number updates as the records do.`;
+}
+
+// hover tooltips for the bars
+const tip = document.getElementById('tip');
+document.addEventListener('pointermove', e => {
+  const t = e.target.closest('[data-tip]');
+  if (!t) { tip.hidden = true; return; }
+  tip.textContent = t.dataset.tip; tip.hidden = false;
+  tip.style.left = Math.min(innerWidth - tip.offsetWidth - 8, e.clientX + 12) + 'px'; tip.style.top = (e.clientY - 36) + 'px';
+});
+
+O.load().then(people => { if (people.length) render(people); });
+})();
+</script>
+</body>
+</html>

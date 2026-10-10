@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>How We’re Related · Owen Family</title>
+<meta name="description" content="Find exactly how any two people in the Owen family are related, and the line of ancestors that connects them.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:ital,opsz,wght@0,6..96,400..800;1,6..96,400..700&family=Newsreader:ital,opsz,wght@0,6..72,400..600;1,6..72,400&family=Instrument+Sans:wght@400..600&family=Caveat:wght@500&display=swap">
+<link rel="stylesheet" href="site.css">
+<style>
+.wrap { max-width: 1080px; margin: 0 auto; padding: 0 var(--gutter); }
+h1 { font: 500 clamp(40px, 7vw, 76px)/1 var(--display); margin: 48px 0 10px; letter-spacing: -.02em; }
+.lede { font-size: 19px; color: var(--ink-soft); max-width: 50ch; margin: 0 0 28px; }
+.pickers { display: grid; grid-template-columns: 1fr auto 1fr; gap: 14px; align-items: start; }
+@media (max-width: 720px) { .pickers { grid-template-columns: 1fr; } .swap { justify-self: center; transform: rotate(90deg); } }
+.pick { background: var(--card); border-radius: 18px; box-shadow: var(--shadow); padding: 16px; }
+.pick .label { font: 600 12.5px var(--ui); letter-spacing: .07em; text-transform: uppercase; color: var(--ink-soft); margin: 0 0 8px; }
+.chosen { display: flex; align-items: center; gap: 10px; margin-top: 10px; min-height: 44px; }
+.chosen .nm { font: 600 18px/1.2 var(--body); }
+.chosen .yr { font: 13px var(--ui); color: var(--ink-soft); }
+.chosen .bar { width: 6px; align-self: stretch; border-radius: 3px; background: var(--c); }
+.swap { margin-top: 40px; width: 44px; height: 44px; border-radius: 50%; border: 1px solid var(--rule); background: var(--card); cursor: pointer; font-size: 18px; }
+.answer { margin: 36px 0 18px; text-align: center; }
+.answer .big { font: 500 clamp(28px, 4.4vw, 48px)/1.1 var(--display); margin: 0 auto 10px; max-width: 24ch; text-wrap: balance; }
+.answer .big em { font-style: italic; color: var(--owen); }
+.answer p { color: var(--ink-soft); margin: 0 auto; max-width: 56ch; }
+.path { display: grid; grid-template-columns: 1fr 1fr; gap: 0 40px; position: relative; margin: 30px auto 60px; max-width: 760px; }
+.path .col { display: flex; flex-direction: column; gap: 12px; }
+.path .apex { grid-column: 1 / -1; justify-self: center; margin-bottom: 16px; }
+.node { display: block; position: relative; background: var(--card); border-radius: 14px; box-shadow: var(--shadow); padding: 10px 14px 10px 20px; text-decoration: none; }
+.node::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 6px; background: var(--c); border-radius: 14px 0 0 14px; }
+.node .r { font: 600 11.5px var(--ui); color: var(--ink-soft); letter-spacing: .03em; }
+.node .n { font: 600 16px/1.25 var(--body); }
+.node .y { font: 12.5px var(--ui); color: var(--ink-soft); }
+.node.end { box-shadow: 0 0 0 2px var(--c), var(--shadow); }
+.apex .node { text-align: center; padding: 12px 22px; }
+.apex .node::before { display: none; }
+.apex .tag { font: 600 12px var(--ui); color: var(--margin-ink); letter-spacing: .06em; text-transform: uppercase; display: block; margin-bottom: 2px; }
+.down { text-align: center; color: var(--pencil); font: 16px var(--ui); line-height: 1; }
+.none { text-align: center; color: var(--ink-soft); margin: 40px auto; max-width: 52ch; }
+.quick { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin: 0 0 70px; }
+</style>
+</head>
+<body>
+<main class="wrap">
+  <h1>How we’re related</h1>
+  <p class="lede">Pick any two people. We’ll find the ancestors they share and spell out the relationship.</p>
+  <div class="pickers">
+    <div class="pick">
+      <p class="label">First person</p>
+      <div class="finder"><input id="fa" type="search" placeholder="Search a name…" autocomplete="off" aria-label="First person"><ul class="results" id="fa-r" role="listbox"></ul></div>
+      <div class="chosen" id="ca"></div>
+    </div>
+    <button class="swap" id="swap" type="button" aria-label="Swap the two people">⇄</button>
+    <div class="pick">
+      <p class="label">Second person</p>
+      <div class="finder"><input id="fb" type="search" placeholder="Search a name…" autocomplete="off" aria-label="Second person"><ul class="results" id="fb-r" role="listbox"></ul></div>
+      <div class="chosen" id="cb"></div>
+    </div>
+  </div>
+  <div id="out"></div>
+</main>
+<script src="../data-loader.js"></script>
+<script src="site.js"></script>
+<script>
+(() => {
+'use strict';
+const O = Owen, { esc, P } = O;
+O.nav('related');
+let A = null, B = null;
+
+function chosen(el, id) {
+  const p = P[id];
+  el.innerHTML = p ? `<span class="bar" style="--c:${O.colorOf(p)}"></span><span><span class="nm">${esc(O.displayName(p))}</span><br><span class="yr">${esc(O.years(p))}</span></span>` : '';
+}
+// path from `id` up to ancestor `top` (list of ids, id first)
+function pathUp(id, top) {
+  const prev = { [id]: null }, q = [id];
+  while (q.length) { const c = q.shift(); if (c === top) break; for (const par of O.parentsOf(c)) if (par && !(par in prev)) { prev[par] = c; q.push(par); } }
+  if (!(top in prev)) return null;
+  const out = []; let c = top; while (c) { out.unshift(c); c = prev[c]; }
+  return out.reverse(); // id ... top
+}
+function commonAncestor(a, b) {
+  const da = O.ancestorsWithDepth(a), db = O.ancestorsWithDepth(b);
+  let best = null;
+  da.forEach((x, id) => { if (db.has(id)) { const s = x + db.get(id); if (!best || s < best.s) best = { id, s }; } });
+  if (!best) return null;
+  // if the shared ancestor has a spouse who is also shared, show the couple
+  const spouse = O.spousesOf(best.id).find(sp => da.has(sp.id) && db.has(sp.id) && da.get(sp.id) === da.get(best.id));
+  return { id: best.id, spouse: spouse && spouse.id };
+}
+function node(id, label, end) {
+  const p = P[id];
+  return `<a class="node${end ? ' end' : ''}" href="tree.html#${id}" style="--c:${O.colorOf(p)}"><span class="r">${esc(label)}</span><br><span class="n">${esc(O.shortName(p))}</span><br><span class="y">${esc(O.years(p))}</span></a>`;
+}
+const cap = s => s ? s.charAt(0).toUpperCase() + s.slice(1) : s;
+function show() {
+  chosen(document.getElementById('ca'), A); chosen(document.getElementById('cb'), B);
+  const out = document.getElementById('out');
+  if (A && B) history.replaceState(null, '', `#${A},${B}`);
+  if (!A || !B) { out.innerHTML = quick(); wireQuick(); return; }
+  const pa = P[A], pb = P[B];
+  if (A === B) { out.innerHTML = `<div class="answer"><p class="big">That’s the same person twice.</p></div>`; return; }
+  const rel = O.relationTo(A, B); // how B relates to A
+  const back = O.relationTo(B, A);
+  if (!rel) { out.innerHTML = `<p class="none">We couldn’t find a connection between <b>${esc(O.displayName(pa))}</b> and <b>${esc(O.displayName(pb))}</b> in the records yet. They may connect through people not yet in the database.</p>` + quick(); wireQuick(); return; }
+  const ca = commonAncestor(A, B);
+  let pathHtml = '';
+  if (ca) {
+    const up = pathUp(A, ca.id) || [A], dn = pathUp(B, ca.id) || [B];
+    const left = up.slice(0, -1).reverse(), right = dn.slice(0, -1).reverse();
+    const relLabel = (who, id) => id === who ? (who === A ? 'First person' : 'Second person') : cap(O.relationTo(who, id).replace(/^your /, `${O.firstName(P[who])}’s `));
+    pathHtml = `<div class="path">
+      <div class="apex">${`<a class="node" href="tree.html#${ca.id}"><span class="tag">Shared ancestor${ca.spouse ? 's' : ''}</span><span class="n">${esc(O.shortName(P[ca.id]))}${ca.spouse ? ' &amp; ' + esc(O.shortName(P[ca.spouse])) : ''}</span><br><span class="y">${esc(O.years(P[ca.id]))}</span></a>`}</div>
+      <div class="col">${left.map((id, i) => (i ? '<div class="down">↓</div>' : '<div class="down">↓</div>') + node(id, relLabel(A, id), id === A)).join('')}</div>
+      <div class="col">${right.map((id, i) => '<div class="down">↓</div>' + node(id, relLabel(B, id), id === B)).join('')}</div>
+    </div>`;
+  }
+  out.innerHTML = `<div class="answer">
+      <p class="big">${esc(O.firstName(pb))} is ${esc(O.firstName(pa))}’s <em>${esc(rel.replace(/^your /, ''))}</em>.</p>
+      ${back ? `<p>And ${esc(O.firstName(pa))} is ${esc(O.firstName(pb))}’s ${esc(back.replace(/^your /, ''))}.</p>` : ''}
+    </div>${pathHtml}
+    <p class="quick"><a class="btn ghost small" href="tree.html#${A}">${esc(O.firstName(pa))} in the tree</a><a class="btn ghost small" href="tree.html#${B}">${esc(O.firstName(pb))} in the tree</a></p>`;
+}
+function quick() {
+  const me = O.me();
+  const ideas = [[me || 'P001', 'P096'], [me || 'P001', 'P011'], ['P006', 'P017'], ['P001', 'P087']].filter(([a, b]) => P[a] && P[b] && a !== b);
+  return ideas.length ? `<p class="quick" style="margin-top:30px">${ideas.map(([a, b]) => `<button class="chip" type="button" data-a="${a}" data-b="${b}">${esc(O.firstName(P[a]))} &amp; ${esc(O.shortName(P[b]))}</button>`).join('')}</p>` : '';
+}
+function wireQuick() { document.querySelectorAll('[data-a]').forEach(b => b.onclick = () => { A = b.dataset.a; B = b.dataset.b; show(); }); }
+O.bindFinder(document.getElementById('fa'), document.getElementById('fa-r'), id => { A = id; show(); });
+O.bindFinder(document.getElementById('fb'), document.getElementById('fb-r'), id => { B = id; show(); });
+document.getElementById('swap').onclick = () => { [A, B] = [B, A]; show(); };
+O.load().then(() => {
+  const [a, b] = location.hash.slice(1).split(',');
+  A = P[a] ? a : O.me(); B = P[b] ? b : null;
+  show();
+});
+})();
+</script>
+</body>
+</html>

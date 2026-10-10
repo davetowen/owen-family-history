@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Maps · Owen Family</title>
+<meta name="description" content="Where the Owen family was born, lived and died, and the journeys that brought each of us here.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:ital,opsz,wght@0,6..96,400..800;1,6..96,400..700&family=Newsreader:ital,opsz,wght@0,6..72,400..600;1,6..72,400&family=Instrument+Sans:wght@400..600&family=Caveat:wght@500&display=swap">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<link rel="stylesheet" href="site.css">
+<style>
+html, body { height: 100%; overflow: hidden; }
+.layout { display: grid; grid-template-columns: 400px 1fr; height: calc(100dvh - var(--nav-h)); }
+.side { background: var(--card); border-right: 1px solid var(--rule); display: flex; flex-direction: column; min-height: 0; z-index: 5; }
+.side .top { padding: 18px 20px 12px; border-bottom: 1px solid var(--rule); }
+.side h1 { font: 500 30px/1.05 var(--display); margin: 0 0 4px; letter-spacing: -.01em; }
+.side .sub { font: 14px var(--ui); color: var(--ink-soft); margin: 0 0 14px; }
+.tabs { display: flex; gap: 4px; background: var(--paper); padding: 4px; border-radius: 12px; margin-bottom: 12px; }
+.tabs button { flex: 1; border: 0; background: transparent; padding: 8px 6px; border-radius: 9px; font: 600 13.5px var(--ui); cursor: pointer; color: var(--ink-soft); }
+.tabs button[aria-selected="true"] { background: var(--card); color: var(--ink); box-shadow: var(--shadow); }
+.side .body { overflow: auto; flex: 1; padding: 14px 20px 30px; overscroll-behavior: contain; }
+.side h2 { font: 500 24px/1.1 var(--display); margin: 4px 0 8px; }
+.side h3 { font: 600 12.5px var(--ui); letter-spacing: .07em; text-transform: uppercase; color: var(--ink-soft); margin: 18px 0 8px; }
+.side p { font-size: 15.5px; margin: 0 0 10px; }
+.mapwrap { position: relative; min-height: 0; }
+#map { position: absolute; inset: 0; background: #E9E4D8; }
+.leaflet-tile-pane { filter: grayscale(.55) sepia(.18) brightness(1.04) contrast(.92); }
+.leaflet-container { font-family: var(--ui); }
+.leaflet-popup-content-wrapper { border-radius: 14px; box-shadow: var(--shadow-lift); }
+.leaflet-popup-content { margin: 12px 14px; font: 14px/1.45 var(--ui); min-width: 200px; }
+.pop h4 { font: 600 16px/1.2 var(--body); margin: 0 0 6px; }
+.pop .people { max-height: 220px; overflow: auto; margin: 0; padding: 0; list-style: none; }
+.pop li { padding: 4px 0; border-top: 1px solid var(--paper-deep); display: flex; gap: 8px; align-items: baseline; }
+.pop li:first-child { border-top: 0; }
+.pop a { color: var(--ink); font-weight: 600; text-decoration: none; }
+.pop a:hover { text-decoration: underline; }
+.pop .y { color: var(--ink-soft); font-size: 12.5px; }
+.pop .approx { font-size: 12px; color: var(--margin-ink); margin-top: 6px; }
+.timebar { position: absolute; left: 16px; right: 16px; bottom: 16px; z-index: 1050; display: flex; align-items: center; gap: 12px; background: var(--card); border-radius: 14px; box-shadow: var(--shadow-lift); padding: 10px 14px; }
+.timebar button { width: 40px; height: 40px; border-radius: 50%; border: 0; background: var(--ink); color: var(--paper); font-size: 15px; cursor: pointer; flex: none; }
+.timebar input[type=range] { flex: 1; accent-color: var(--owen); }
+.timebar .yr { font: 500 26px/1 var(--display); min-width: 64px; text-align: right; font-variant-numeric: lining-nums tabular-nums; }
+.timebar .lab { font: 12px var(--ui); color: var(--ink-soft); white-space: nowrap; }
+.list { list-style: none; margin: 0; padding: 0; }
+.list li { display: grid; grid-template-columns: 54px 1fr; gap: 10px; padding: 9px 0; border-top: 1px solid var(--paper-deep); cursor: pointer; }
+.list li:hover .nm { text-decoration: underline; }
+.list .when { font: 500 18px/1.2 var(--display); color: var(--ink-soft); font-variant-numeric: lining-nums; }
+.list .nm { font: 600 15.5px/1.25 var(--body); }
+.list .where { font: 13px var(--ui); color: var(--ink-soft); }
+.list .dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 6px; vertical-align: 1px; }
+.list .century { display: block; grid-template-columns: none; font: 600 12px var(--ui); letter-spacing: .08em; text-transform: uppercase; color: var(--pencil); padding-top: 18px; cursor: default; border-top: 0; }
+.big-number { display: flex; gap: 22px; margin: 10px 0 6px; flex-wrap: wrap; }
+.big-number div { display: flex; flex-direction: column; }
+.big-number b { font: 500 34px/1 var(--display); }
+.big-number span { font: 12.5px var(--ui); color: var(--ink-soft); }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip[aria-pressed="false"] { opacity: .45; }
+.who { display: flex; gap: 10px; align-items: center; margin: 10px 0 4px; }
+.who .btn { flex: none; }
+.countries { display: flex; flex-wrap: wrap; gap: 6px; }
+.countries span { font: 500 13px var(--ui); background: var(--paper); border-radius: 999px; padding: 4px 10px; }
+.flagnote { font: 12.5px var(--ui); color: var(--ink-soft); margin-top: 14px; }
+.toggle-side { display: none; }
+@media (max-width: 820px) {
+  .layout { grid-template-columns: 1fr; grid-template-rows: 1fr; }
+  .side { position: absolute; left: 0; right: 0; bottom: 0; height: 56dvh; border-right: 0; border-radius: 20px 20px 0 0; box-shadow: 0 -10px 40px rgba(29,26,22,.18); transition: transform .35s cubic-bezier(.2,.7,.2,1); z-index: 1100; }
+  .side.min { transform: translateY(calc(100% - 132px)); }
+  .toggle-side { display: block; width: 100%; height: 22px; border: 0; background: transparent; position: relative; flex: none; cursor: pointer; }
+  .toggle-side::after { content: ""; position: absolute; left: 50%; top: 8px; width: 44px; height: 5px; border-radius: 3px; background: var(--rule); transform: translateX(-50%); }
+  .side .top { padding-top: 2px; }
+  .side h1 { font-size: 24px; }
+  .mapwrap { height: calc(100dvh - var(--nav-h)); }
+  .timebar { bottom: auto; top: 12px; left: 10px; right: 10px; padding: 6px 10px; }
+  .timebar .yr { font-size: 20px; min-width: 50px; }
+  .timebar button { width: 34px; height: 34px; }
+  .status-stamp { display: none; }
+  .leaflet-control-zoom { display: none; }
+  .leaflet-bottom { bottom: 132px; }
+}
+</style>
+</head>
+<body>
+<div class="layout">
+  <aside class="side min" id="side">
+    <button class="toggle-side" id="toggle-side" type="button" aria-label="Expand or collapse the panel"></button>
+    <div class="top">
+      <h1>Family maps</h1>
+      <p class="sub" id="sub">Where we were born, lived and died, and how we got here.</p>
+      <div class="tabs" role="tablist">
+        <button role="tab" type="button" data-mode="journey" aria-selected="true">Journeys</button>
+        <button role="tab" type="button" data-mode="everyone" aria-selected="false">Everyone</button>
+        <button role="tab" type="button" data-mode="moves" aria-selected="false">Moves</button>
+      </div>
+      <div class="finder">
+        <label class="sr-only" for="find">Find a person</label>
+        <input id="find" type="search" placeholder="Show the journey for…" autocomplete="off">
+        <ul class="results" id="find-results" role="listbox"></ul>
+      </div>
+    </div>
+    <div class="body" id="side-body"></div>
+  </aside>
+  <div class="mapwrap">
+    <div id="map" role="region" aria-label="Map"></div>
+    <div class="timebar" id="timebar">
+      <button type="button" id="play" aria-label="Play through time">▶</button>
+      <span class="lab" id="tlab">Up to</span>
+      <input type="range" id="year" min="1250" max="2026" step="1" aria-label="Year">
+      <span class="yr" id="yr">2026</span>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="../data-loader.js"></script>
+<script src="places.js"></script>
+<script src="site.js"></script>
+<script>
+(() => {
+'use strict';
+const O = Owen, { esc, P } = O;
+O.nav('maps');
+const NOW = new Date().getFullYear();
+
+/* ---------- places ---------- */
+const GEO = window.OWEN_GEO || {}, UNSURE = new Set(window.OWEN_GEO_UNCERTAIN || []);
+const k3 = (...a) => a.map(x => (x || '').trim()).filter(Boolean).join(', ').toLowerCase();
+// where was this person born / did they die? returns {lat, lng, label, approx}
+function where(p, which) {
+  const c = p[which + 'City'], s = p[which + 'State'], co = p[which + 'Country'];
+  if (!c && !s && !co) return null;
+  const tries = [k3(c, s, co), k3(c, co), k3(c, s), k3(s, co), k3(co)];
+  for (let i = 0; i < tries.length; i++) {
+    const key = tries[i]; if (!key || !GEO[key]) continue;
+    const [lat, lng] = GEO[key];
+    const exact = i <= 2 && !!c;
+    return { lat, lng, label: O.place(p, which), approx: !exact || UNSURE.has(key), key: lat.toFixed(2) + ',' + lng.toFixed(2) };
+  }
+  return null;
+}
+
+/* ---------- map ---------- */
+const map = L.map('map', { zoomControl: false, worldCopyJump: true, minZoom: 2 }).setView([48, -40], 3);
+L.control.zoom({ position: 'topright' }).addTo(map);
+L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 18, attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors' }).addTo(map);
+let layer = L.layerGroup().addTo(map);
+
+// a gentle arc between two places, drawn as a polyline
+function arc(a, b, bend = 0.18) {
+  const pts = [], lat1 = a.lat, lng1 = a.lng; let lat2 = b.lat, lng2 = b.lng;
+  if (Math.abs(lng2 - lng1) > 180) lng2 += lng2 < lng1 ? 360 : -360;
+  const mx = (lat1 + lat2) / 2, my = (lng1 + lng2) / 2, dx = lat2 - lat1, dy = lng2 - lng1;
+  const cx = mx - dy * bend, cy = my + dx * bend;
+  for (let t = 0; t <= 1.0001; t += 1 / 28) { const u = 1 - t; pts.push([u * u * lat1 + 2 * u * t * cx + t * t * lat2, u * u * lng1 + 2 * u * t * cy + t * t * lng2]); }
+  return pts;
+}
+const personLink = p => `<a href="tree.html#${p.id}">${esc(O.shortName(p))}</a>`;
+function popupFor(place, list, approx) {
+  return `<div class="pop"><h4>${esc(place)}</h4><ul class="people">${list.sort(O.byBirth).map(({ p, what }) => `<li><span class="swatch" style="background:${O.colorOf(p)}"></span><span>${personLink(p)} <span class="y">${esc(what)}</span></span></li>`).join('')}</ul>${approx ? '<div class="approx">Location is approximate.</div>' : ''}</div>`;
+}
+
+/* ---------- state ---------- */
+const S = { mode: 'journey', focus: null, year: NOW, fams: null, playing: null };
+const side = document.getElementById('side'), body = document.getElementById('side-body');
+const yearInput = document.getElementById('year'), yrOut = document.getElementById('yr');
+
+/* ---------- Journeys: every ancestor's birthplace, joined parent → child ---------- */
+function journeyData(id) {
+  const anc = O.ancestorsWithDepth(id); // id -> generations up
+  const steps = [];
+  anc.forEach((g, aid) => { const p = P[aid], w = where(p, 'birth'); steps.push({ p, g, w }); });
+  return steps;
+}
+function drawJourney(fit) {
+  layer.clearLayers();
+  const id = S.focus; if (!id) return;
+  const steps = journeyData(id), by = new Map(steps.map(s => [s.p.id, s]));
+  const shown = steps.filter(s => s.w && (!s.p.birthYear || s.p.birthYear <= S.year));
+  // lines from each parent's birthplace to the child's birthplace
+  shown.forEach(s => {
+    O.parentsOf(s.p.id).forEach(par => {
+      const ps = par && by.get(par);
+      if (!ps || !ps.w || (ps.p.birthYear && ps.p.birthYear > S.year)) return;
+      if (ps.w.key === s.w.key) return;
+      const c = O.colorOf(ps.p);
+      L.polyline(arc(ps.w, s.w), { color: c, weight: Math.max(1.5, 4.5 - ps.g * 0.35), opacity: .85, dashArray: ps.w.approx || s.w.approx ? '4 6' : null }).addTo(layer)
+        .bindTooltip(`${esc(O.shortName(ps.p))} → ${esc(O.shortName(s.p))}`, { sticky: true });
+    });
+  });
+  // one marker per place
+  const groups = {};
+  shown.forEach(s => { (groups[s.w.key] = groups[s.w.key] || { w: s.w, list: [] }).list.push({ p: s.p, what: s.p.birthYear ? `born ${s.p.birthYear}` : 'born' }); });
+  Object.values(groups).forEach(gr => {
+    const isFocus = gr.list.some(x => x.p.id === id);
+    const first = gr.list.slice().sort(O.byBirth)[0].p;
+    L.circleMarker([gr.w.lat, gr.w.lng], { radius: isFocus ? 11 : 5 + Math.min(7, gr.list.length * 1.4), color: '#fff', weight: 2, fillColor: isFocus ? '#1D1A16' : O.colorOf(first), fillOpacity: .95, dashArray: gr.w.approx ? '2 3' : null })
+      .addTo(layer).bindPopup(popupFor(gr.w.label, gr.list, gr.w.approx));
+  });
+  if (fit) fitTo(shown.map(s => [s.w.lat, s.w.lng]));
+  renderJourneySide(steps);
+}
+function renderJourneySide(steps) {
+  const p = P[S.focus], me = O.me();
+  const placed = steps.filter(s => s.w && s.g > 0);
+  const countries = [...new Set(steps.filter(s => s.g > 0).map(s => (s.p.birthCountry || '').trim()).filter(Boolean))];
+  const oldest = steps.filter(s => s.p.birthYear).sort((a, b) => a.p.birthYear - b.p.birthYear)[0];
+  const list = steps.filter(s => s.g > 0 && s.p.birthYear).sort((a, b) => a.p.birthYear - b.p.birthYear);
+  let lastC = null;
+  const rows = list.map(s => {
+    const c = Math.floor(s.p.birthYear / 100) + 1, head = c !== lastC ? `<li class="century">${c}th century</li>` : ''; lastC = c;
+    const rel = O.relationTo(S.focus, s.p.id).replace(/^your /, '');
+    return `${head}<li data-id="${s.p.id}"><span class="when">${s.p.birthYear}</span><span><span class="nm"><span class="dot" style="background:${O.colorOf(s.p)}"></span>${esc(O.shortName(s.p))}</span><br><span class="where">${rel ? esc(rel.charAt(0).toUpperCase() + rel.slice(1)) + ' · ' : ''}${s.w ? 'born in ' + esc(s.w.label) : 'birthplace unknown'}</span></span></li>`;
+  }).join('');
+  body.innerHTML = `
+    <h2>How ${esc(O.firstName(p))} got here</h2>
+    <p>Every ancestor of ${esc(O.displayName(p))} with a known birthplace, joined to their child. Colours follow the family lines, as in the tree.</p>
+    <div class="who"><a class="btn small" href="tree.html#${p.id}">Open in the tree</a><a class="btn small ghost" href="story.html#${p.id}">Read the story</a>${me && me !== p.id ? `<button class="btn small ghost" type="button" id="to-me">My journey</button>` : ''}</div>
+    <div class="big-number"><div><b>${steps.length - 1}</b><span>ancestors on record</span></div><div><b>${countries.length}</b><span>countries</span></div>${oldest ? `<div><b>${oldest.p.birthYear}</b><span>earliest birth</span></div>` : ''}</div>
+    ${countries.length ? `<div class="countries">${countries.map(c => `<span>${esc(c)}</span>`).join('')}</div>` : ''}
+    <h3>Through the centuries</h3>
+    <ul class="list" id="jlist">${rows || '<li class="century">No ancestors with birth years yet.</li>'}</ul>
+    <p class="flagnote">Dashed lines and dotted circles mean the place is approximate. ${placed.length < steps.length - 1 ? `${steps.length - 1 - placed.length} ancestors have no birthplace recorded.` : ''}</p>`;
+  const tm = document.getElementById('to-me'); if (tm) tm.onclick = () => go(me);
+  body.querySelectorAll('#jlist li[data-id]').forEach(li => li.onclick = () => flyToPerson(li.dataset.id));
+}
+
+/* ---------- Everyone: all birthplaces ---------- */
+function drawEveryone(fit) {
+  layer.clearLayers();
+  const groups = {}; let count = 0;
+  O.PEOPLE.forEach(p => {
+    if (S.fams && !S.fams.has(O.familyKey(p))) return;
+    if (p.birthYear && p.birthYear > S.year) return;
+    if (!p.birthYear && S.year < NOW) return;
+    const w = where(p, 'birth'); if (!w) return;
+    count++;
+    (groups[w.key] = groups[w.key] || { w, list: [] }).list.push({ p, what: p.birthYear ? `born ${p.birthYear}` : '' });
+  });
+  Object.values(groups).forEach(gr => {
+    const fam = {}; gr.list.forEach(x => { const k = O.familyKey(x.p); fam[k] = (fam[k] || 0) + 1; });
+    const top = Object.entries(fam).sort((a, b) => b[1] - a[1])[0][0];
+    L.circleMarker([gr.w.lat, gr.w.lng], { radius: 4 + Math.sqrt(gr.list.length) * 3, color: '#fff', weight: 1.5, fillColor: O.familyColor(top), fillOpacity: .85, dashArray: gr.w.approx ? '2 3' : null })
+      .addTo(layer).bindPopup(popupFor(gr.w.label, gr.list, gr.w.approx));
+  });
+  if (fit) fitTo(Object.values(groups).map(g => [g.w.lat, g.w.lng]));
+  renderFamilySide('Where everyone was born', `${count} people born by ${S.year}. Bigger circles mean more people born there. Press play to watch the family spread.`);
+}
+
+/* ---------- Moves: birthplace → place of death ---------- */
+function drawMoves(fit) {
+  layer.clearLayers();
+  const pts = []; let n = 0;
+  O.PEOPLE.forEach(p => {
+    if (S.fams && !S.fams.has(O.familyKey(p))) return;
+    const a = where(p, 'birth'), b = where(p, 'death');
+    if (!a || !b || a.key === b.key) return;
+    const yr = p.deathYear || p.birthYear; if (yr && yr > S.year) return;
+    n++;
+    const c = O.colorOf(p);
+    L.polyline(arc(a, b), { color: c, weight: 2.2, opacity: .75, dashArray: a.approx || b.approx ? '4 6' : null }).addTo(layer)
+      .bindPopup(`<div class="pop"><h4>${personLink(p)}</h4>${esc(O.years(p))}<br>Born in ${esc(a.label)}<br>Died in ${esc(b.label)}</div>`);
+    L.circleMarker([b.lat, b.lng], { radius: 3.5, color: c, weight: 1, fillColor: c, fillOpacity: 1 }).addTo(layer);
+    pts.push([a.lat, a.lng], [b.lat, b.lng]);
+  });
+  if (fit) fitTo(pts);
+  renderFamilySide('Lives that moved', `${n} people who died somewhere other than where they were born. Each line runs from birthplace to place of death.`);
+}
+
+function renderFamilySide(title, text) {
+  const fams = {}; O.PEOPLE.forEach(p => { const k = O.familyKey(p); if (k) fams[k] = (fams[k] || 0) + 1; });
+  const list = Object.entries(fams).filter(([, v]) => v >= 3).sort((a, b) => b[1] - a[1]);
+  body.innerHTML = `<h2>${esc(title)}</h2><p>${esc(text)}</p>
+    <h3>Family lines</h3><div class="chips" id="famchips">${list.map(([k, v]) => `<button class="chip" type="button" data-fam="${k}" aria-pressed="${!S.fams || S.fams.has(k)}"><span class="swatch" style="background:${O.familyColor(k)}"></span>${esc(O.familyLabel(k))}<span class="y">${v}</span></button>`).join('')}</div>
+    <p style="margin-top:10px"><button class="btn small ghost" type="button" id="famall">${S.fams ? 'Show all lines' : 'Tap lines to filter'}</button></p>
+    <p class="flagnote">Click any circle or line to see who it is, then open them in the tree.</p>`;
+  body.querySelectorAll('[data-fam]').forEach(b => b.onclick = () => {
+    const k = b.dataset.fam;
+    if (!S.fams) S.fams = new Set([k]); else if (S.fams.has(k)) { S.fams.delete(k); if (!S.fams.size) S.fams = null; } else S.fams.add(k);
+    draw(false);
+  });
+  document.getElementById('famall').onclick = () => { S.fams = null; draw(false); };
+}
+
+/* ---------- helpers ---------- */
+function fitTo(latlngs) {
+  if (!latlngs.length) return;
+  const pad = innerWidth <= 820 ? [30, 30] : [60, 60];
+  map.fitBounds(L.latLngBounds(latlngs), { paddingTopLeft: [pad[0], innerWidth <= 820 ? 70 : 30], paddingBottomRight: [pad[1], innerWidth <= 820 ? 160 : 90], maxZoom: 7 });
+}
+function flyToPerson(id) {
+  const w = where(P[id], 'birth'); if (!w) return;
+  map.flyTo([w.lat, w.lng], Math.max(map.getZoom(), 6), { duration: .8 });
+  setTimeout(() => layer.eachLayer(l => { if (l.getLatLng && l.getLatLng().lat === w.lat && l.getLatLng().lng === w.lng && l.openPopup) l.openPopup(); }), 850);
+  if (innerWidth <= 820) side.classList.add('min');
+}
+function draw(fit) {
+  if (S.mode === 'journey') drawJourney(fit);
+  else if (S.mode === 'everyone') drawEveryone(fit);
+  else drawMoves(fit);
+  document.getElementById('tlab').textContent = S.mode === 'moves' ? 'Lives ended by' : 'Born by';
+}
+function setMode(m, fit = true) {
+  S.mode = m;
+  document.querySelectorAll('.tabs button').forEach(b => b.setAttribute('aria-selected', b.dataset.mode === m));
+  document.getElementById('find').placeholder = m === 'journey' ? 'Show the journey for…' : 'Find a person on the map…';
+  draw(fit);
+}
+document.querySelectorAll('.tabs button').forEach(b => b.onclick = () => setMode(b.dataset.mode));
+
+/* ---------- time slider ---------- */
+function setYear(y, redraw = true) { S.year = y; yearInput.value = y; yrOut.textContent = y >= NOW ? 'Today' : y; if (redraw) draw(false); }
+yearInput.addEventListener('input', () => setYear(+yearInput.value));
+document.getElementById('play').onclick = e => {
+  const btn = e.currentTarget;
+  if (S.playing) { clearInterval(S.playing); S.playing = null; btn.textContent = '▶'; return; }
+  let y = +yearInput.min; if (S.year < NOW - 5) y = S.year;
+  btn.textContent = '❚❚';
+  S.playing = setInterval(() => { y += 8; if (y >= NOW) { y = NOW; clearInterval(S.playing); S.playing = null; btn.textContent = '▶'; } setYear(y); }, 160);
+};
+
+/* ---------- people ---------- */
+function go(id) { if (location.hash.slice(1) === id) route(); else location.hash = id; }
+function route() {
+  const id = location.hash.slice(1);
+  S.focus = P[id] ? id : (S.focus || O.me() || (P.P001 ? 'P001' : null));
+  if (S.mode === 'journey' || P[id]) setMode(P[id] ? 'journey' : S.mode, true);
+}
+addEventListener('hashchange', route);
+O.bindFinder(document.getElementById('find'), document.getElementById('find-results'), id => {
+  if (S.mode === 'journey') go(id); else flyToPerson(id);
+});
+document.getElementById('toggle-side').onclick = () => side.classList.toggle('min');
+if (innerWidth > 820) side.classList.remove('min');
+
+O.load().then(people => {
+  if (!people.length) return;
+  const y0 = Math.floor(Math.min(...people.map(p => p.birthYear).filter(Boolean)) / 10) * 10;
+  yearInput.min = y0; yearInput.max = NOW; setYear(NOW, false);
+  route();
+  setTimeout(() => map.invalidateSize(), 100);
+});
+})();
+</script>
+</body>
+</html>

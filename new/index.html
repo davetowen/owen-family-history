@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Owen Family</title>
+<meta name="description" content="The Owen family across six centuries: find yourself, read your story, and explore the family tree.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:ital,opsz,wght@0,6..96,400..800;1,6..96,400..700&family=Newsreader:ital,opsz,wght@0,6..72,400..600;1,6..72,400&family=Instrument+Sans:wght@400..600&family=Caveat:wght@500&display=swap">
+<link rel="stylesheet" href="site.css">
+<style>
+.wrap { max-width: var(--maxw); margin: 0 auto; padding: 0 var(--gutter); }
+.hero { padding: clamp(40px, 7vw, 92px) 0 28px; }
+.hero h1 { font: 500 clamp(52px, 10vw, 128px)/.92 var(--display); letter-spacing: -.025em; margin: 0; }
+.hero h1 em { font-style: italic; color: var(--owen); }
+.hero .lede { font-size: clamp(19px, 2.2vw, 23px); line-height: 1.45; max-width: 36ch; margin: 22px 0 30px; color: var(--ink-soft); }
+.hero-grid { display: grid; grid-template-columns: 1.1fr 1fr; gap: clamp(28px, 5vw, 72px); align-items: end; }
+@media (max-width: 860px) { .hero-grid { grid-template-columns: 1fr; } }
+.find-box { background: var(--card); border-radius: 20px; box-shadow: var(--shadow); padding: 22px; }
+.find-box h2 { font: 600 15px var(--ui); margin: 0 0 12px; }
+.find-box .finder input { font-size: 19px; padding: 15px 16px 15px 44px; }
+.picked { margin-top: 14px; display: none; border-top: 1px solid var(--rule); padding-top: 14px; }
+.picked.on { display: block; }
+.picked .who { font: 500 24px/1.1 var(--display); margin: 0 0 4px; }
+.picked .meta { font: 14px var(--ui); color: var(--ink-soft); margin: 0 0 12px; }
+.picked .row { display: flex; gap: 8px; flex-wrap: wrap; }
+.find-box .or { font: 13px var(--ui); color: var(--ink-soft); margin: 14px 0 0; }
+.find-box .or a { color: var(--ink); }
+
+.loom { margin: 34px 0 6px; position: relative; }
+.loom svg { display: block; width: 100%; height: clamp(170px, 22vw, 260px); }
+.loom .axis { display: flex; justify-content: space-between; font: 12px var(--ui); color: var(--pencil); margin-top: 6px; font-variant-numeric: tabular-nums; }
+.loom figcaption { font: 13px var(--ui); color: var(--ink-soft); margin-top: 10px; }
+.loom line { stroke-linecap: round; }
+
+.stats { display: flex; gap: clamp(20px, 5vw, 64px); flex-wrap: wrap; margin: 26px 0 0; padding: 0; list-style: none; }
+.stats li { display: flex; flex-direction: column; }
+.stats b { font: 500 clamp(32px, 4.5vw, 48px)/1 var(--display); font-variant-numeric: lining-nums; }
+.stats span { font: 13px var(--ui); color: var(--ink-soft); margin-top: 4px; }
+
+.core { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin: 64px 0 22px; }
+@media (max-width: 760px) { .core { grid-template-columns: 1fr; } }
+.core a { position: relative; display: block; min-height: 300px; border-radius: 24px; padding: 30px; text-decoration: none; overflow: hidden; color: #fff; box-shadow: var(--shadow); transition: transform .25s ease, box-shadow .25s ease; }
+.core a:hover { transform: translateY(-3px); box-shadow: var(--shadow-lift); }
+.core .story { background: linear-gradient(135deg, #C3283A 0%, #8E3A7A 55%, #2356C8 100%); }
+.core .tree { background: linear-gradient(135deg, #1D1A16 0%, #2E3A2C 100%); }
+.core .tag { font: 600 12.5px var(--ui); letter-spacing: .08em; text-transform: uppercase; opacity: .85; }
+.core h2 { font: 500 clamp(36px, 4.6vw, 56px)/1 var(--display); margin: 10px 0 12px; letter-spacing: -.01em; }
+.core p { font-size: 18px; max-width: 30ch; margin: 0; opacity: .92; }
+.core .go { position: absolute; left: 30px; bottom: 26px; font: 600 15px var(--ui); display: inline-flex; gap: 8px; align-items: center; background: rgba(255,255,255,.16); padding: 9px 16px; border-radius: 999px; }
+@media (max-width: 760px) { .core svg.art { opacity: .28 !important; width: 70%; } .core a { min-height: 260px; } }
+.core svg.art { position: absolute; right: -10px; bottom: -10px; width: 58%; height: 78%; opacity: .9; pointer-events: none; }
+
+.tiles { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 70px; }
+@media (max-width: 960px) { .tiles { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 480px) { .tiles { grid-template-columns: 1fr; } }
+.tiles a { display: block; background: var(--card); border-radius: 18px; padding: 20px; text-decoration: none; box-shadow: var(--shadow); border: 1px solid transparent; transition: border-color .2s ease, transform .2s ease; }
+.tiles a:hover { border-color: var(--ink); transform: translateY(-2px); }
+.tiles .ico { width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center; margin-bottom: 14px; }
+.tiles b { display: block; font: 600 17px var(--ui); margin-bottom: 4px; }
+.tiles span { font: 14.5px/1.4 var(--ui); color: var(--ink-soft); }
+.tiles .soon { font: 500 11.5px var(--ui); color: var(--pencil); margin-top: 8px; display: block; }
+
+.section-h { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; margin: 0 0 18px; flex-wrap: wrap; }
+.section-h h2 { font: 500 clamp(30px, 4vw, 44px)/1 var(--display); margin: 0; }
+.section-h p { margin: 0; color: var(--ink-soft); font-size: 16px; }
+.visits { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 14px; margin-bottom: 70px; }
+.visits a { position: relative; display: block; background: var(--card); border-radius: 18px; padding: 18px 18px 18px 24px; text-decoration: none; box-shadow: var(--shadow); overflow: hidden; }
+.visits a::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 6px; background: var(--c); }
+.visits b { display: block; font: 600 18px/1.2 var(--body); margin-bottom: 4px; }
+.visits span { font: 13.5px/1.4 var(--ui); color: var(--ink-soft); }
+.lines { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 80px; }
+</style>
+</head>
+<body>
+<main>
+  <div class="wrap">
+    <section class="hero">
+      <div class="hero-grid">
+        <div>
+          <p class="kicker">Six centuries of one family</p>
+          <h1>The <em>Owen</em><br>Family</h1>
+          <p class="lede" id="lede">From medieval England to New York City: every person, every journey, and every story we know.</p>
+        </div>
+        <div class="find-box">
+          <h2>Find yourself, or anyone, in the family</h2>
+          <div class="finder">
+            <label class="sr-only" for="find">Search by name</label>
+            <input id="find" type="search" placeholder="Type a first or last name…" autocomplete="off">
+            <ul class="results" id="find-results" role="listbox"></ul>
+          </div>
+          <div class="picked" id="picked"></div>
+          <p class="or">Just visiting? <a href="#visits">Start with one of these stories</a>.</p>
+        </div>
+      </div>
+      <figure class="loom" id="loom" aria-label="Every life in the family drawn as a thread across time">
+        <svg id="loom-svg" preserveAspectRatio="none" role="img" aria-hidden="true"></svg>
+        <div class="axis" id="loom-axis"></div>
+        <figcaption id="loom-cap">Every thread is one life, coloured by family line.</figcaption>
+      </figure>
+      <ul class="stats" id="stats"></ul>
+    </section>
+
+    <section class="core" aria-label="Start here">
+      <a class="story" href="story.html" id="core-story">
+        <span class="tag">Start here</span>
+        <h2>Your story</h2>
+        <p>Scroll back through everyone who led to you, generation by generation.</p>
+        <span class="go">Read a story →</span>
+        <svg class="art" viewBox="0 0 200 160" aria-hidden="true"><g fill="none" stroke="rgba(255,255,255,.55)" stroke-width="2"><path d="M100 150V110M100 110C100 90 60 90 60 70M100 110C100 90 140 90 140 70M60 70C60 52 38 52 38 34M60 70C60 52 82 52 82 34M140 70C140 52 118 52 118 34M140 70C140 52 162 52 162 34"/></g><g fill="#fff"><circle cx="100" cy="150" r="7"/><circle cx="60" cy="70" r="5"/><circle cx="140" cy="70" r="5"/><circle cx="38" cy="34" r="4"/><circle cx="82" cy="34" r="4"/><circle cx="118" cy="34" r="4"/><circle cx="162" cy="34" r="4"/></g></svg>
+      </a>
+      <a class="tree" href="tree.html" id="core-tree">
+        <span class="tag">Explore</span>
+        <h2>The family tree</h2>
+        <p>Everyone, connected. Click any person to see their parents, children and full record.</p>
+        <span class="go">Open the tree →</span>
+        <svg class="art" viewBox="0 0 200 160" aria-hidden="true" id="tree-art"></svg>
+      </a>
+    </section>
+
+    <section class="tiles" aria-label="More ways to explore">
+      <a href="maps.html"><div class="ico" style="background:#E3ECF8">🗺️</div><b>Maps</b><span>Where the family was born, lived and died, and the journeys between.</span></a>
+      <a href="related.html" data-page="related"><div class="ico" style="background:#F6E7E9">🔗</div><b>How we’re related</b><span>The exact link between any two people.</span></a>
+      <a href="timeline.html" data-page="timeline"><div class="ico" style="background:#F4EEDB">⏳</div><b>Timeline</b><span>Every life against the sweep of history.</span></a>
+      <a href="research.html" data-page="research"><div class="ico" style="background:#E5F0E8">🔍</div><b>Research desk</b><span>Open questions, gaps and sources. Help us get it right.</span></a>
+    </section>
+
+    <section id="visits">
+      <div class="section-h"><h2>Just visiting?</h2><p>Five lives worth starting with.</p></div>
+      <div class="visits" id="visit-list"></div>
+    </section>
+
+    <section>
+      <div class="section-h"><h2>The family lines</h2><p>Tap a line to meet its earliest ancestor on record.</p></div>
+      <div class="lines" id="lines"></div>
+    </section>
+  </div>
+</main>
+<footer class="footer">
+  Spot a mistake or know a story? Every person in the tree has a <b>Suggest a fix</b> button.<br>
+  The <a href="../index.html">original family site</a> is still here, just as it was.
+</footer>
+
+<script src="../data-loader.js"></script>
+<script src="site.js"></script>
+<script>
+(() => {
+'use strict';
+const O = Owen, { esc, P } = O;
+O.nav('home');
+
+const VISITS = ['P096', 'P277', 'P192', 'P087', 'P351'];
+
+function pick(id) {
+  const p = P[id], box = document.getElementById('picked');
+  const me = O.me();
+  box.innerHTML = `<p class="who">${esc(O.displayName(p))}</p><p class="meta">${esc(O.years(p))}${O.place(p) ? ' · ' + esc(O.place(p)) : ''}</p>
+    <div class="row"><a class="btn" href="story.html#${p.id}">Read ${esc(O.firstName(p))}’s story</a><a class="btn ghost" href="tree.html#${p.id}">See the tree</a>
+    <button class="btn ghost" type="button" id="this-me">${me === p.id ? '✓ This is me' : 'This is me'}</button></div>`;
+  box.classList.add('on');
+  document.getElementById('this-me').onclick = e => { O.setMe(p.id); e.currentTarget.textContent = '✓ This is me'; O.toast(`Welcome, ${O.firstName(p)}. Pages will now show how everyone is related to you.`); personalise(); };
+}
+
+function loom(people) {
+  const svg = document.getElementById('loom-svg');
+  const lives = people.filter(p => p.birthYear).map(p => ({ p, a: p.birthYear, b: p.alive ? new Date().getFullYear() : (p.deathYear || p.birthYear + 55) }));
+  if (!lives.length) return;
+  const y0 = Math.floor(Math.min(...lives.map(l => l.a)) / 50) * 50, y1 = new Date().getFullYear() + 5;
+  // group threads by family line, then by birth year, so colours form bands
+  const fams = {}; lives.forEach(l => { const k = O.familyKey(l.p) || 'zz'; (fams[k] = fams[k] || []).push(l); });
+  const order = Object.keys(fams).sort((a, b) => fams[b].length - fams[a].length);
+  const rows = []; order.forEach(k => fams[k].sort((a, b) => a.a - b.a).forEach(l => rows.push(l)));
+  const W = 1000, H = 260, rowH = H / rows.length;
+  svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+  const x = yr => (yr - y0) / (y1 - y0) * W;
+  svg.innerHTML = rows.map((l, i) => {
+    const yy = (i + .5) * rowH, c = O.colorOf(l.p);
+    return `<line x1="${x(l.a).toFixed(1)}" x2="${Math.max(x(l.a) + 2, x(l.b)).toFixed(1)}" y1="${yy.toFixed(2)}" y2="${yy.toFixed(2)}" stroke="${c}" stroke-width="${Math.max(1, rowH * .78).toFixed(2)}" opacity="${l.p.alive ? 1 : .82}"><title>${esc(O.displayName(l.p))} · ${esc(O.years(l.p))}</title></line>`;
+  }).join('') + `<line x1="${x(new Date().getFullYear())}" x2="${x(new Date().getFullYear())}" y1="0" y2="${H}" stroke="#1D1A16" stroke-width="1.2" stroke-dasharray="3 4" vector-effect="non-scaling-stroke"/>`;
+  const ticks = []; const step = innerWidth < 640 ? 200 : 100; for (let t = Math.ceil(y0 / step) * step; t <= y1; t += step) ticks.push(t);
+  document.getElementById('loom-axis').innerHTML = `<span>${y0}</span>${ticks.filter(t => t - y0 > (innerWidth < 640 ? 90 : 40) && y1 - t > (innerWidth < 640 ? 40 : 15)).map(t => `<span>${t}</span>`).join('')}<span>Today</span>`;
+  document.getElementById('loom-cap').textContent = `Every thread is one of the ${lives.length} lives with a known birth year, coloured by family line. The dotted line is today.`;
+}
+
+function stats(people) {
+  const born = people.map(p => p.birthYear).filter(Boolean);
+  const countries = new Set(people.flatMap(p => [p.birthCountry, p.deathCountry]).filter(Boolean).map(c => c.trim()));
+  const gens = (() => { let best = 0; people.forEach(p => { const d = O.ancestorsWithDepth(p.id); d.forEach(v => best = Math.max(best, v)); }); return best + 1; })();
+  const living = people.filter(p => p.alive).length;
+  const items = [[people.length, 'people'], [gens, 'generations'], [countries.size, 'countries'], [Math.min(...born), 'earliest birth'], [living, 'living today']];
+  document.getElementById('stats').innerHTML = items.map(([n, l]) => `<li><b>${n}</b><span>${l}</span></li>`).join('');
+  document.getElementById('lede').textContent = `${people.length} people across ${gens} generations and ${countries.size} countries, from ${Math.min(...born)} to today: every person, every journey, and every story we know.`;
+}
+
+// a one-line note built only from what the record says
+function noteFor(p) {
+  if (p.war) return `${/war/i.test(p.war) ? p.war : p.war + ' War'}${p.militaryBranch ? ', ' + p.militaryBranch : ''}`;
+  const b = p.birthCountry, d = p.deathCountry;
+  if (b && d && b !== d) return `From ${p.birthCity || b} to ${p.deathCity || d}`;
+  return O.place(p) ? `Born in ${O.place(p)}` : '';
+}
+function visits() {
+  document.getElementById('visit-list').innerHTML = VISITS.filter(id => P[id]).map(id => {
+    const p = P[id], n = noteFor(p);
+    return `<a href="story.html#${id}" style="--c:${O.colorOf(p)}"><b>${esc(O.displayName(p))}</b><span>${esc(O.years(p))}${n ? ' · ' + esc(n) : ''}</span></a>`;
+  }).join('');
+}
+
+function lines(people) {
+  const fams = {};
+  people.forEach(p => { const k = O.familyKey(p); if (!k) return; (fams[k] = fams[k] || []).push(p); });
+  const list = Object.entries(fams).filter(([, v]) => v.length >= 4).sort((a, b) => b[1].length - a[1].length);
+  document.getElementById('lines').innerHTML = list.map(([k, v]) => {
+    const oldest = v.filter(p => p.birthYear).sort(O.byBirth)[0] || v[0];
+    return `<a class="chip" href="tree.html#${oldest.id}"><span class="swatch" style="background:${O.familyColor(k)}"></span>${esc(O.familyLabel(k, v[0]))}<span class="y">${v.length}</span></a>`;
+  }).join('');
+}
+
+function treeArt() {
+  // a tiny pedigree in the family colours
+  const cols = ['#C3283A', '#E06A16', '#2356C8', '#14805A'];
+  let s = '<g fill="none" stroke="rgba(255,255,255,.35)" stroke-width="1.5">';
+  const pts = [[30, 80]], lvl = [[[30, 80]]];
+  for (let g = 1; g <= 3; g++) { const prev = lvl[g - 1], next = []; prev.forEach(([x, y], i) => { const dy = 64 / Math.pow(2, g); [[x + 48, y - dy], [x + 48, y + dy]].forEach(q => { s += `<path d="M${x},${y} C${x + 24},${y} ${x + 24},${q[1]} ${q[0]},${q[1]}"/>`; next.push(q); }); }); lvl.push(next); }
+  s += '</g>';
+  lvl.forEach((L, g) => L.forEach(([x, y], i) => { const c = g === 0 ? '#fff' : cols[Math.floor(i / Math.pow(2, g - 1)) % 4] || '#fff'; s += `<rect x="${x - 2}" y="${y - 6}" width="${g === 0 ? 30 : 26}" height="12" rx="4" fill="${c}" opacity=".95"/>`; }));
+  document.getElementById('tree-art').innerHTML = s;
+}
+
+function personalise() {
+  const me = O.me();
+  if (!me) return;
+  const p = P[me];
+  document.getElementById('core-story').href = `story.html#${me}`;
+  document.getElementById('core-story').querySelector('.go').textContent = `Read ${O.firstName(p)}’s story →`;
+  document.getElementById('core-tree').href = `tree.html#${me}`;
+}
+
+O.bindFinder(document.getElementById('find'), document.getElementById('find-results'), pick);
+treeArt();
+O.load().then(people => {
+  if (!people.length) return;
+  loom(people); stats(people); visits(); lines(people); personalise();
+});
+})();
+</script>
+</body>
+</html>
