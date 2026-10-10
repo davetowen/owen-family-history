@@ -73,21 +73,28 @@ function askGemini_(place, year, kind, model) {
   const key = prop_('GEMINI_API_KEY');
   if (!key) throw new Error('GEMINI_API_KEY is not set in Script properties.');
 
-  const moment = kind === 'death'
-    ? `the world as it was in ${year}, the year a family member died in ${place}`
-    : `the world a baby was born into in ${place} in ${year}`;
+  const opening = kind === 'death'
+    ? `A family member died in ${place} in ${year}. Describe the world as it was the year they left us, for family members reading it today.`
+    : `A baby was born in ${place} in ${year}. Paint a picture of the world they arrived in, for family members reading it today.`;
 
+  const town = place.split(',')[0].trim();
   const prompt = [
-    `You are writing for a family history website. Describe ${moment}.`,
-    'Write 5 short facts, one or two sentences each, in plain warm English, in this order:',
-    '1. What the town or city was like that year (size, main work, what it was known for).',
-    '2. Everyday life for an ordinary family there (homes, travel, prices, food, school, or church).',
-    '3. Something that happened locally or in the region around that year.',
-    '4. What was happening in the country.',
-    '5. What was happening in the wider world.',
-    'Rules: only state things you are confident are true. If you are unsure about the town itself, describe the region or country instead and say so.',
-    'Do not invent names, numbers, or events. Do not mention the family or any individual person in the family.',
-    'Also give 3 short search phrases that would find historical photographs of this place around that time on Wikimedia Commons (for example "Main Street Rhinelander 1910s").'
+    `You are writing for a family history website. ${opening}`,
+    'Write 8 short items, each starting with its label exactly as shown, then a colon:',
+    `1. The town: what ${town} was like that year: its size, what people did for work, and anything new being built or opened.`,
+    "2. Everyday life: what an ordinary family's home, meals, getting around, and school or work looked like.",
+    "3. What things cost: two or three typical prices that year, such as a loaf of bread, a newspaper, a car, a house, or a day's wages.",
+    '4. Nearby news: something that happened in the town or region around that year.',
+    '5. The nation: the big story in the country that year.',
+    '6. Pop culture: the songs, films, radio or TV shows, books, sports stars or crazes people were talking about. Before recorded music, use popular songs, hymns, books, theater, fairs or pastimes of the day.',
+    '7. Brand new: an invention, gadget, fashion or fad that was new that year.',
+    "8. The world: what was happening beyond the country's borders.",
+    'Rules:',
+    '- Be specific: real names of songs, films, events and places, and real prices. Only include what you are confident is true. If you are not sure about the town itself, describe the region and say so.',
+    '- Keep each item to one or two sentences, in a warm, plain, lively tone.',
+    '- Do not use filler words like "bustling", "vibrant", "rich tapestry" or "hustle and bustle".',
+    '- Do not mention the family or any person in it.',
+    `Also give 3 short search phrases that would find historical photographs of ${town} around that time on Wikimedia Commons (for example "Main Street Rhinelander 1910s").`
   ].join('\n');
 
   const body = {
@@ -121,7 +128,7 @@ function askGemini_(place, year, kind, model) {
   const text = (((data.candidates || [])[0] || {}).content || {}).parts?.map(p => p.text || '').join('') || '{}';
   const parsed = JSON.parse(text);
   const clean = a => (Array.isArray(a) ? a : []).map(s => String(s).trim()).filter(Boolean);
-  const facts = clean(parsed.facts).slice(0, 6), terms = clean(parsed.searchTerms).slice(0, 4);
+  const facts = clean(parsed.facts).slice(0, 10), terms = clean(parsed.searchTerms).slice(0, 4);
   if (!facts.length) throw new Error('Gemini returned no facts.');
   return { facts, searchTerms: terms };
 }

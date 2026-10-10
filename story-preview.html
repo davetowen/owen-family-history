@@ -892,7 +892,7 @@ async function loadWorld(el) {
       const r = await fetch(`${PLACE_ERA_URL}?place=${encodeURIComponent(placeTxt)}&year=${year}&kind=${el.dataset.kind}`);
       const d = await r.json();
       if (d.facts && d.facts.length) {
-        facts.innerHTML = d.facts.map(f => `<li><span>${esc(f)}</span></li>`).join('');
+        facts.innerHTML = d.facts.map(f => { const m = /^([^:]{2,24}):\s*(.+)$/s.exec(f); return `<li><span>${m ? `<b>${esc(m[1])}:</b> ${esc(m[2])}` : esc(f)}</span></li>`; }).join('');
         note.textContent = 'Written by AI from the place and year, and saved for the family to check. Spot something wrong? Tell Dave.';
       }
       terms = d.searchTerms || [];
