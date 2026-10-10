@@ -238,6 +238,7 @@ dialog .row { display: flex; gap: 8px; justify-content: flex-end; margin-top: 16
 (() => {
 'use strict';
 const O = Owen, { esc, P } = O;
+const CONF = new Set(['High', 'Medium', 'Low']);
 O.nav('tree');
 
 /* ---------- settings ---------- */
@@ -316,7 +317,7 @@ function layout(focusId) {
   function emitAnc(node, childPort) {
     const x = colX(node.g), y = node.cy - node.h / 2;
     if (node.ghost) {
-      nodes.push({ key: `ghost-${node.childId}-${node.which}`, ghost: true, x, y, w: node.w, h: node.h, g: node.g, childId: node.childId, which: node.which, role: 'ghost' });
+      nodes.push({ key: keyFor(`ghost-${node.childId}-${node.which}`), ghost: true, x, y, w: node.w, h: node.h, g: node.g, childId: node.childId, which: node.which, role: 'ghost' });
     } else {
       const p = P[node.id];
       nodes.push({ key: keyFor(node.id), id: node.id, x, y, w: node.w, h: node.h, g: node.g, role: 'anc', rel: ancWord(node.g, p), compact: node.g >= 4 });
@@ -367,7 +368,7 @@ function layout(focusId) {
       const parents = O.parentsOf(focusId).filter(Boolean);
       colNodes.forEach(c => {
         if (c.role === 'spouse') return;
-        if (c.role === 'sib') { const sp = O.parentsOf(c.p.id); if (!sp.some(x => x && parents.includes(x))) return; }
+        if (c.role === 'sib') { const sp = O.parentsOf(c.p.id).filter(Boolean); const shared = sp.filter(x => parents.includes(x)).length; if (shared === 0 || (parents.length === 2 && sp.length === 2 && shared < 2)) return; }
         links.push({ d: curve(c.x + c.w, c.y + c.h / 2, jx, jy), color: '#B9B3A8', cls: c.role === 'focus' ? 'main' : '' });
       });
     }
@@ -378,7 +379,7 @@ function layout(focusId) {
     const groups = [];
     const kids = O.childrenOf(focusId);
     const used = new Set();
-    spouses.forEach(sp => { const g = kids.filter(k => [k.fatherId, k.motherId].includes(sp.id)); g.forEach(k => used.add(k.id)); if (g.length) groups.push({ sp, kids: g }); });
+    spouses.forEach(sp => { const g = kids.filter(k => !used.has(k.id) && [k.fatherId, k.motherId].includes(sp.id)); g.forEach(k => used.add(k.id)); if (g.length) groups.push({ sp, kids: g }); });
     const rest = kids.filter(k => !used.has(k.id));
     if (rest.length) groups.push({ sp: null, kids: rest });
 
@@ -490,12 +491,12 @@ function draw(lay, fromKey) {
       el.style.transform = `translate(${start.x}px, ${start.y}px)`;
       el.classList.add('entering');
     }
-    el.className = `card${n.role === 'focus' ? ' focus' : ''}${n.role === 'sib' ? ' sib' : ''}${n.ghost ? ' ghost' : ''}${n.compact ? ' compact' : ''}${n.id && P[n.id].dataConfidence ? ' c-' + P[n.id].dataConfidence : ''}${isNew ? ' entering' : ''}`;
+    el.className = `card${n.role === 'focus' ? ' focus' : ''}${n.role === 'sib' ? ' sib' : ''}${n.ghost ? ' ghost' : ''}${n.compact ? ' compact' : ''}${n.id && CONF.has(P[n.id].dataConfidence) ? ' c-' + P[n.id].dataConfidence : ''}${isNew ? ' entering' : ''}`;
     if (n.id) { el.dataset.id = n.id; el.style.setProperty('--c', O.colorOf(P[n.id])); el.setAttribute('aria-label', `${O.displayName(P[n.id])}, ${O.years(P[n.id])}${n.rel ? ', ' + n.rel : ''}`); }
     else { delete el.dataset.id; el.dataset.ghost = `${n.childId}|${n.which}`; el.setAttribute('aria-label', `${n.which} unknown. Suggest who it was.`); }
     el.style.width = n.w + 'px'; el.style.height = n.h + 'px';
     el.innerHTML = cardHtml(n);
-    requestAnimationFrame(() => requestAnimationFrame(() => { el.style.transform = `translate(${n.x}px, ${n.y}px)`; el.classList.remove('entering'); }));
+    setTimeout(() => { el.style.transform = `translate(${n.x}px, ${n.y}px)`; el.classList.remove('entering'); }, 30);
   });
   // lines fade out, then redraw once the cards have moved
   linksEl.style.opacity = 0;
@@ -648,7 +649,7 @@ function route() {
   S.focus = target;
   O.store.set('tree.last', target);
   document.title = `${O.displayName(P[target])} · Family Tree · Owen Family`;
-  openPanel(target, first && innerWidth <= 820);
+  openPanel(target, innerWidth <= 820);
   render(pendingFrom, !first);
   if (first) firstView();
   pendingFrom = null;
@@ -657,7 +658,7 @@ addEventListener('hashchange', route);
 
 // keyboard: arrows walk the family
 document.addEventListener('keydown', e => {
-  if (e.target.closest('input, textarea, dialog')) return;
+  if (e.target.closest('input, textarea, dialog') || e.ctrlKey || e.metaKey || e.altKey) return;
   const f = S.focus; if (!f) return;
   const [dad, mum] = O.parentsOf(f);
   let to = null;
@@ -695,7 +696,7 @@ function panelHtml(p) {
   const rel = me && me !== p.id ? O.relationTo(me, p.id) : '';
   const born = [p.birthYear, O.place(p)].filter(Boolean).join(' · ');
   const died = p.alive ? '' : [p.deathYear, O.place(p, 'death')].filter(Boolean).join(' · ');
-  const chip = (q, word) => `<button class="chip" type="button" data-go="${q.id}"><span class="swatch" style="background:${O.colorOf(q)}"></span>${esc(O.shortName(q))}<span class="y">${q.birthYear || ''}</span>${word ? `<span class="y">· ${esc(word)}</span>` : ''}</button>`;
+  const chip = (q, word) => `<button class="chip" type="button" data-go="${esc(q.id)}"><span class="swatch" style="background:${O.colorOf(q)}"></span>${esc(O.shortName(q))}<span class="y">${esc(q.birthYear || '')}</span>${word ? `<span class="y">· ${esc(word)}</span>` : ''}</button>`;
   const [dad, mum] = O.parentsOf(p.id);
   const sibs = O.siblingsOf(p.id), spouses = O.spousesOf(p.id), kids = O.childrenOf(p.id);
   const grp = (label, list) => list.length ? `<div class="grp"><span>${label}</span><div class="chips">${list.join('')}</div></div>` : '';
@@ -709,15 +710,15 @@ function panelHtml(p) {
     <button class="grip" type="button" aria-label="Expand or collapse"></button>
     <div class="head">
       <button class="close" type="button" aria-label="Close">×</button>
-      <div class="fam"><span class="swatch" style="background:${O.colorOf(p)}"></span>${esc(O.familyLabel(k, p))} family${p.dataConfidence ? ` · <span class="conf conf-${p.dataConfidence}">${p.dataConfidence === 'High' ? 'Well documented' : p.dataConfidence === 'Medium' ? 'Mostly confirmed' : 'Unconfirmed'}</span>` : ''}</div>
+      <div class="fam"><span class="swatch" style="background:${O.colorOf(p)}"></span>${esc(O.familyLabel(k, p))} family${CONF.has(p.dataConfidence) ? ` · <span class="conf conf-${p.dataConfidence}">${p.dataConfidence === 'High' ? 'Well documented' : p.dataConfidence === 'Medium' ? 'Mostly confirmed' : 'Unconfirmed'}</span>` : ''}</div>
       <h2>${esc(O.displayName(p))}</h2>
       <p class="sub">${esc(O.years(p))}${O.place(p) ? ' · born in ' + esc(O.place(p)) : ''}</p>
       <div class="rel-me">${me ? (me === p.id ? '<span class="tag">This is you</span>' : rel ? `<span class="tag">${esc(rel.charAt(0).toUpperCase() + rel.slice(1))}</span>` : '<span>Not a blood relative of yours on record</span>') : ''}
-        <button type="button" data-me="${p.id}">${me === p.id ? 'Not me' : me ? 'This is me instead' : 'This is me'}</button></div>
+        <button type="button" data-me="${esc(p.id)}">${me === p.id ? 'Not me' : me ? 'This is me instead' : 'This is me'}</button></div>
       <div class="actions">
-        ${S.focus !== p.id ? `<button class="btn small" type="button" data-go="${p.id}">Centre the tree here</button>` : ''}
-        <a class="btn small" href="story.html#${p.id}">Read ${esc(O.firstName(p))}’s story</a>
-        <a class="btn small ghost" href="maps.html#${p.id}">On the map</a>
+        ${S.focus !== p.id ? `<button class="btn small" type="button" data-go="${esc(p.id)}">Centre the tree here</button>` : ''}
+        <a class="btn small" href="story.html#${esc(p.id)}">Read ${esc(O.firstName(p))}’s story</a>
+        <a class="btn small ghost" href="maps.html#${esc(p.id)}">On the map</a>
         <button class="btn small ghost" type="button" data-share>Share</button>
       </div>
     </div>
@@ -731,12 +732,12 @@ function panelHtml(p) {
       </section>
       <section><h3>Life</h3><dl>
         ${item('Born', esc(born))}
-        ${p.alive ? '' : item('Died', esc(died) + (p.ageAtDeath ? `, aged ${p.ageAtDeath}` : ''))}
+        ${p.alive ? '' : item('Died', esc(died) + (p.ageAtDeath ? `, aged ${esc(p.ageAtDeath)}` : ''))}
         ${p.alive ? '' : item('Resting place', esc(p.burialPlace || ''))}
         ${p.nickname ? item('Known as', esc(p.nickname)) : ''}${p.maidenName ? item('Maiden name', esc(p.maidenName)) : ''}
         ${p.immigrationYear ? item('Came to the U.S.', esc(p.immigrationYear)) : ''}
         ${adult ? item('Work', esc([p.occupation, p.employers].filter(Boolean).join(' · '))) : ''}
-        ${adult || served ? item('Military', esc(served), 'None recorded. Did they serve?') : ''}
+        ${adult || served ? item('Military', served, 'None recorded. Did they serve?') : ''}
         ${adult || p.undergradUniv ? item('Education', esc([[p.undergradUniv, p.undergradYear].filter(Boolean).join(' '), [p.gradUniv, p.gradYear].filter(Boolean).join(' ')].filter(Boolean).join('; '))) : ''}
         ${p.sports || p.flyFishing ? item('Interests', esc([p.sports, p.flyFishing && 'Fly fishing'].filter(Boolean).join(' · '))) : ''}
       </dl></section>
@@ -754,7 +755,7 @@ function panelHtml(p) {
       <section><h3>Research</h3>
         ${p.reviewQuestions ? `<div class="question" style="margin-bottom:12px"><b>Open question:</b> ${esc(p.reviewQuestions)}</div>` : ''}
         <dl style="margin-bottom:12px">
-          ${item('How sure', p.dataConfidence ? `<span class="conf conf-${p.dataConfidence}">${p.dataConfidence}</span>${p.confidenceReason ? ' ' + esc(p.confidenceReason) : ''}` : '', 'Not yet rated')}
+          ${item('How sure', CONF.has(p.dataConfidence) ? `<span class="conf conf-${p.dataConfidence}">${p.dataConfidence}</span>${p.confidenceReason ? ' ' + esc(p.confidenceReason) : ''}` : '', 'Not yet rated')}
           ${item('Sources', esc(p.researchSources || ''), 'None listed yet')}
           ${p.researchStatus ? item('Status', esc(p.researchStatus)) : ''}
         </dl>
@@ -819,7 +820,8 @@ document.getElementById('suggest-mail').addEventListener('click', () => setTimeo
 O.bindFinder(document.getElementById('find'), document.getElementById('find-results'), id => go(id));
 
 /* ---------- start ---------- */
-addEventListener('resize', () => { const n = current.nodes.find(n => n.role === 'focus'); if (n) centreOn(n, false); });
+let lastW = innerWidth;
+addEventListener('resize', () => { if (innerWidth === lastW && innerWidth <= 820) return; lastW = innerWidth; const n = current.nodes.find(n => n.role === 'focus'); if (n) centreOn(n, false); });
 syncControls();
 O.load().then(people => {
   if (!people.length) { document.getElementById('stage').insertAdjacentHTML('beforeend', '<div class="empty-state">The family data could not be loaded.</div>'); return; }

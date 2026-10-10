@@ -88,9 +88,9 @@
     const [up, down] = best, o = P[otherId];
     if (down === 0) return up === 1 ? sexWord(o, 'father', 'mother', 'parent') : ord(up - 1) + sexWord(o, 'grandfather', 'grandmother', 'grandparent');
     if (up === 0) return down === 1 ? sexWord(o, 'son', 'daughter', 'child') : ord(down - 1) + sexWord(o, 'grandson', 'granddaughter', 'grandchild');
-    if (up === 1 && down === 1) return sexWord(o, 'brother', 'sister', 'sibling');
-    if (down === 1) return (up === 2 ? '' : ord(up - 2)) + sexWord(o, 'uncle', 'aunt', 'aunt or uncle');
-    if (up === 1) return (down === 2 ? '' : ord(down - 2)) + sexWord(o, 'nephew', 'niece', 'niece or nephew');
+    if (up === 1 && down === 1) { const shared = parentsOf(meId).filter(x => x && parentsOf(otherId).includes(x)).length; const both = parentsOf(meId).filter(Boolean).length === 2 && parentsOf(otherId).filter(Boolean).length === 2; return (shared === 1 && both ? 'half-' : '') + sexWord(o, 'brother', 'sister', 'sibling'); }
+    if (down === 1) return ord(up - 1) + sexWord(o, 'uncle', 'aunt', 'aunt or uncle');
+    if (up === 1) return ord(down - 1) + sexWord(o, 'nephew', 'niece', 'niece or nephew');
     const degree = Math.min(up, down) - 1, removed = Math.abs(up - down);
     return `${nth(degree)} cousin${removed ? (removed === 1 ? ' once' : removed === 2 ? ' twice' : ` ${removed} times`) + ' removed' : ''}`;
   }
@@ -138,7 +138,7 @@
   function bindFinder(input, list, onPick) {
     let items = [], idx = -1;
     const draw = () => {
-      list.innerHTML = items.map((p, i) => `<li role="option" id="${list.id}-${i}" aria-selected="${i === idx}" data-id="${p.id}">
+      list.innerHTML = items.map((p, i) => `<li role="option" id="${list.id}-${i}" aria-selected="${i === idx}" data-id="${esc(p.id)}">
         <span class="swatch" style="background:${colorOf(p)}"></span>
         <span><span class="r-name">${esc(displayName(p))}</span><br><span class="r-meta">${esc(years(p))}${place(p) ? ' · ' + esc(place(p)) : ''}</span></span></li>`).join('');
       input.setAttribute('aria-activedescendant', idx >= 0 ? `${list.id}-${idx}` : '');
