@@ -987,7 +987,7 @@ async function boot() {
   } else if (window.OWEN_SNAPSHOT) { people = window.OWEN_SNAPSHOT.people; label = `${people.length} people · preview copy from ${window.OWEN_SNAPSHOT.taken}`; }
   prepare(people);
   if (label) showStatus(label);
-  [['tree-link', LINKS.tree], ['research-link', LINKS.atlas], ['classic-link', LINKS.classic]].forEach(([i, u]) => { const a = document.getElementById(i); a.href = u; });
+  [['tree-link', LINKS.tree + location.hash], ['research-link', LINKS.atlas], ['classic-link', LINKS.classic]].forEach(([i, u]) => { const a = document.getElementById(i); a.href = u; });
   document.getElementById('home-link').addEventListener('click', e => { e.preventDefault(); history.pushState('', '', location.pathname + location.search); renderDoor(); });
   document.getElementById('who-btn').addEventListener('click', openPicker);
   document.getElementById('overlay-close').addEventListener('click', closePicker);
@@ -1003,7 +1003,7 @@ boot();
 
 <script>
 // keep the Family tree button pointing at whoever is on screen
-(function () { const upd = () => { const a = document.getElementById('tree-link'); if (a) a.href = 'tree.html' + (location.hash || ''); }; addEventListener('hashchange', upd); setTimeout(upd, 50); })();
+(function () { const upd = () => { const a = document.getElementById('tree-link'); if (a) a.href = 'tree.html' + (location.hash || ''); }; addEventListener('hashchange', upd); setTimeout(upd, 50); setTimeout(upd, 3000); })();
 </script>
 </body>
 </html>

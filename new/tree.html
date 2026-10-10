@@ -60,7 +60,8 @@ html, body { height: 100%; overflow: hidden; }
 /* ---------- floating controls ---------- */
 .toolbar { position: absolute; top: 14px; left: 14px; right: 14px; z-index: 20; display: flex; gap: 10px; align-items: flex-start; pointer-events: none; }
 .toolbar > * { pointer-events: auto; }
-.toolbar .finder { width: min(360px, 100%); }
+.toolbar { flex-wrap: wrap; }
+.toolbar .finder { flex: 1 1 240px; min-width: 220px; max-width: 360px; }
 .toolbar .finder input { box-shadow: var(--shadow); border-color: transparent; }
 .ctrl { display: flex; align-items: center; gap: 2px; background: var(--card); border-radius: 12px; box-shadow: var(--shadow); padding: 4px; font: 500 13.5px var(--ui); }
 .ctrl .lbl { padding: 0 8px 0 10px; color: var(--ink-soft); white-space: nowrap; }
