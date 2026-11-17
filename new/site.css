@@ -35,7 +35,7 @@ img { max-width: 100%; }
 .nav { position: sticky; top: 0; z-index: 50; height: var(--nav-h); display: flex; align-items: center; gap: 18px; padding: 0 var(--gutter);
   background: color-mix(in oklab, var(--paper) 88%, transparent); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); border-bottom: 1px solid var(--rule); }
 .nav .brand { font: 600 21px/1 var(--display); text-decoration: none; letter-spacing: -.01em; white-space: nowrap; display: flex; align-items: center; gap: 10px; }
-.nav .brand .crest { width: 26px; height: 26px; border-radius: 7px; background: conic-gradient(from 210deg, #C3283A 0 25%, #E06A16 0 50%, #2356C8 0 75%, #14805A 0); box-shadow: inset 0 0 0 2px rgba(255,255,255,.55); }
+.nav .brand .crest { width: 36px; height: 36px; background: url(crest.png) center / contain no-repeat; }
 .nav .links { display: flex; gap: 4px; margin-left: auto; align-items: center; }
 .nav .links a, .nav .more > button { font: 500 14.5px var(--ui); text-decoration: none; padding: 8px 12px; border-radius: 999px; border: 0; background: transparent; cursor: pointer; white-space: nowrap; }
 .nav .links a:hover, .nav .more > button:hover { background: var(--paper-deep); }
