@@ -95,6 +95,13 @@ html, body { height: 100%; overflow: hidden; }
 .panel .fam { font: 600 12.5px var(--ui); color: var(--ink-soft); display: flex; gap: 8px; align-items: center; letter-spacing: .02em; }
 .panel h2 { font: 500 30px/1.05 var(--display); margin: 8px 40px 6px 0; letter-spacing: -.01em; text-wrap: balance; }
 .panel .sub { font: 400 15px/1.45 var(--body); color: var(--ink-soft); margin: 0; }
+.panel .portrait { float: left; margin: 6px 14px 4px 0; }
+.panel .portrait button { display: block; width: 84px; height: 104px; padding: 0; border: 0; border-radius: 10px; overflow: hidden; cursor: pointer; background: var(--paper-deep); border: 1px solid var(--rule); }
+.panel .portrait img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.panel .rel-me { clear: both; }
+.card .pic { float: right; width: 40px; height: 40px; border-radius: 50%; object-fit: cover; margin: 0 0 2px 8px; box-shadow: 0 0 0 2px var(--card), 0 0 0 3px var(--c); background: var(--paper-deep); }
+.card.focus .pic { width: 58px; height: 58px; }
+.card.sib .pic { width: 34px; height: 34px; }
 .panel .rel-me { margin-top: 10px; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; font: 500 13.5px var(--ui); }
 .panel .rel-me .tag { background: color-mix(in oklab, var(--c) 14%, var(--card)); color: color-mix(in oklab, var(--c) 70%, var(--ink)); padding: 4px 10px; border-radius: 999px; font-weight: 600; }
 .panel .rel-me button { border: 0; background: none; padding: 0; text-decoration: underline; color: var(--ink-soft); cursor: pointer; font: inherit; }
@@ -166,6 +173,7 @@ dialog .row { display: flex; gap: 8px; justify-content: flex-end; margin-top: 16
   .panel .head { padding-top: 4px; }
   .panel h2 { font-size: 25px; }
   .panel.peek .actions { display: none; }
+  .panel.peek .portrait button { width: 52px; height: 64px; }
 }
 </style>
 </head>
@@ -464,9 +472,10 @@ function cardHtml(n) {
   const living = p.alive ? '<span class="flag" title="Living">living</span>' : '';
   const famLabel = O.familyLabel(k, p);
   const yrs = O.years(p), pl = O.place(p);
+  const face = O.photos.portrait(p.id), pic = face ? O.photos.img(face, 160, 'pic', '') : '';
   if (n.compact) return `<div class="nm">${esc(O.shortName(p))}</div><div class="yr">${esc(yrs)}</div><div class="flags">${q}</div>`;
   return `<div class="fam"><span class="dot"></span>${esc(famLabel)}${n.rel ? `<span class="rel">${esc(n.rel)}</span>` : ''}</div>
-    <div class="nm">${esc(n.role === 'focus' ? O.displayName(p) : O.shortName(p))}</div>
+    ${pic}<div class="nm">${esc(n.role === 'focus' ? O.displayName(p) : O.shortName(p))}</div>
     <div class="yr">${esc(yrs)}${pl && n.role !== 'sib' ? ' · ' + esc(pl) : ''}</div>
     ${n.spouse ? `<div class="spouse">∞ ${esc(O.shortName(n.spouse))}</div>` : ''}
     ${n.more ? `<div class="more-kids">${n.more} ${n.more === 1 ? 'child' : 'children'} →</div>` : ''}
@@ -718,6 +727,7 @@ function panelHtml(p) {
     <div class="head">
       <button class="close" type="button" aria-label="Close">×</button>
       <div class="fam"><span class="swatch" style="background:${O.colorOf(p)}"></span>${esc(O.familyLabel(k, p))} family${CONF.has(p.dataConfidence) ? ` · <span class="conf conf-${p.dataConfidence}">${p.dataConfidence === 'High' ? 'Well documented' : p.dataConfidence === 'Medium' ? 'Mostly confirmed' : 'Unconfirmed'}</span>` : ''}</div>
+      <div class="portrait" id="portrait" hidden></div>
       <h2>${esc(O.displayName(p))}</h2>
       <p class="sub">${esc(O.years(p))}${O.place(p) ? ' · born in ' + esc(O.place(p)) : ''}</p>
       <div class="rel-me">${me ? (me === p.id ? '<span class="tag">This is you</span>' : rel ? `<span class="tag">${esc(rel.charAt(0).toUpperCase() + rel.slice(1))}</span>` : '<span>Not a blood relative of yours on record</span>') : ''}
@@ -737,6 +747,7 @@ function panelHtml(p) {
         ${grp('Brothers and sisters', sibs.map(s => chip(s)))}
         ${grp('Children', kids.map(s => chip(s)))}
       </section>
+      <section id="photos-sec" hidden></section>
       <section><h3>Life</h3><dl>
         ${item('Born', esc(born))}
         ${p.alive ? '' : item('Died', esc(died) + (p.ageAtDeath ? `, aged ${esc(p.ageAtDeath)}` : ''))}
@@ -785,6 +796,7 @@ function wirePanel(p) {
     try { if (navigator.share && innerWidth <= 820) await navigator.share({ title: O.displayName(p), url }); else { await navigator.clipboard.writeText(url); O.toast('Link copied'); } } catch (e) {}
   };
   panel.querySelectorAll('[data-world]').forEach(b => b.onclick = () => loadWorld(p, b.dataset.world, b));
+  O.photos.mount(p, { section: document.getElementById('photos-sec'), portrait: document.getElementById('portrait') });
   // tapping the header on phones expands the sheet
   panel.querySelector('.head').addEventListener('click', e => { if (innerWidth <= 820 && panel.classList.contains('peek') && !e.target.closest('button, a')) panel.classList.remove('peek'); });
 }
@@ -830,6 +842,9 @@ O.bindFinder(document.getElementById('find'), document.getElementById('find-resu
 let lastW = innerWidth;
 addEventListener('resize', () => { if (innerWidth === lastW && innerWidth <= 820) return; lastW = innerWidth; const n = current.nodes.find(n => n.role === 'focus'); if (n) centreOn(n, false); });
 syncControls();
+// when photos arrive or change, put the portraits on the cards already drawn
+O.photos.onChange(() => current.nodes.forEach(n => { const el = els.get(n.key); if (el && n.id) el.innerHTML = cardHtml(n); }));
+O.photos.load();
 O.load().then(people => {
   if (!people.length) { document.getElementById('stage').insertAdjacentHTML('beforeend', '<div class="empty-state">The family data could not be loaded.</div>'); return; }
   route();

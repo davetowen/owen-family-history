@@ -15,10 +15,23 @@
  * the website shows your edited version. Put "Redo" in the Reviewed column to have it
  * regenerated next time someone visits.
  *
+ * It also looks after FAMILY PHOTOS (see the "family photos" section further down):
+ *
+ *   website "Add a photo"  ->  this script  ->  "Owen Family Photos" folder in your Google Drive
+ *                                   |
+ *                                   +-> "Photos" tab in the Owen Genealogy sheet (one row per photo)
+ *
+ * Anyone can see the photos on the website. Only someone who knows the family passcode can add,
+ * hide or re-order them. You can also manage them by hand in the Photos tab: edit a caption,
+ * type Yes in "Main" to choose the portrait, or Yes in "Hide" to take a photo off the website.
+ *
  * Settings (Project Settings -> Script properties):
- *   GEMINI_API_KEY   required. Your key from aistudio.google.com. Never put it in this file.
- *   GEMINI_MODEL     optional. Defaults to gemini-3.8-flash.
- *   MAX_NEW_PER_DAY  optional. Most new Gemini calls per day. Defaults to 150 (set 20 to match the free tier).
+ *   GEMINI_API_KEY      required for Place & Era. Your key from aistudio.google.com. Never put it in this file.
+ *   GEMINI_MODEL        optional. Defaults to gemini-3.8-flash.
+ *   MAX_NEW_PER_DAY     optional. Most new Gemini calls per day. Defaults to 150 (set 20 to match the free tier).
+ *   FAMILY_PASSCODE     required for photo uploads. A word or phrase you share with family. Until it is set, nobody can upload.
+ *   MAX_PHOTOS_PER_DAY  optional. Most photos added per day. Defaults to 60.
+ *   PHOTO_FOLDER_ID     filled in automatically the first time (the Drive folder the photos go into).
  */
 
 const SPREADSHEET_ID = '1EKRkCcujbg64V-UFpvYljIv9BZq_jYOkPUreF1YnoTc';
@@ -27,10 +40,17 @@ const CACHE_TAB = 'Place & Era';
 const HEADERS = ['Key', 'Place', 'Year', 'Kind', 'Facts', 'Search terms', 'Generated', 'Model', 'Reviewed'];
 const DEFAULT_MODEL = 'gemini-3.8-flash';
 
+const PHOTOS_TAB = 'Photos';
+const PHOTO_HEADERS = ['Photo ID', 'Person ID', 'Person', 'Drive file ID', 'Caption', 'Year', 'Added by', 'Added', 'Main', 'Hide'];
+const PHOTO_FOLDER_NAME = 'Owen Family Photos';
+const MAX_PHOTO_BYTES = 8 * 1024 * 1024;
+const PERSON_ID = /^P\d{2,4}$/i;
+
 /* ---------- web entry point ---------- */
 function doGet(e) {
   try {
     const q = (e && e.parameter) || {};
+    if (q.action === 'photos') return json_(listPhotos_());
     const place = String(q.place || '').replace(/\s+/g, ' ').trim();
     const year = parseInt(q.year, 10);
     const kind = q.kind === 'death' ? 'death' : 'birth';
@@ -195,6 +215,191 @@ function underDailyCap_() {
 function norm_(s) { return String(s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9 ]/g, ' ').replace(/\s+/g, ' ').trim(); }
 function prop_(k) { return PropertiesService.getScriptProperties().getProperty(k); }
 function json_(o) { return ContentService.createTextOutput(JSON.stringify(o)).setMimeType(ContentService.MimeType.JSON); }
+
+/* =====================================================================================
+   FAMILY PHOTOS
+   ===================================================================================== */
+
+/* The website sends photo changes here (a POST). Every change needs the family passcode. */
+function doPost(e) {
+  try {
+    const b = JSON.parse((e && e.postData && e.postData.contents) || '{}');
+    const gate = checkPasscode_(b.passcode);
+    if (gate) return json_({ error: gate, badPasscode: true });
+    if (b.action === 'checkPasscode') return json_({ ok: true });
+    if (b.action === 'addPhoto') return json_(addPhoto_(b));
+    if (b.action === 'hidePhoto') return json_(markPhoto_(b.photoId, 'hide'));
+    if (b.action === 'mainPhoto') return json_(markPhoto_(b.photoId, 'main'));
+    if (b.action === 'captionPhoto') return json_(markPhoto_(b.photoId, 'caption', b));
+    return json_({ error: 'Unknown request.' });
+  } catch (err) {
+    console.error(err);
+    return json_({ error: 'Something went wrong saving that. Please try again.' });
+  }
+}
+
+/* What the website reads: every photo that is not hidden. */
+function listPhotos_() {
+  const out = { photos: [], uploads: !!prop_('FAMILY_PASSCODE') };
+  const sh = SpreadsheetApp.openById(SPREADSHEET_ID).getSheetByName(PHOTOS_TAB);
+  if (!sh || sh.getLastRow() < 2) return out;
+  const rows = sh.getRange(2, 1, sh.getLastRow() - 1, PHOTO_HEADERS.length).getDisplayValues();
+  rows.forEach(r => {
+    const person = String(r[1]).trim().toUpperCase(), file = String(r[3]).trim();
+    if (!r[0] || !PERSON_ID.test(person) || !/^[\w-]{20,}$/.test(file) || yes_(r[9])) return;
+    out.photos.push({ id: String(r[0]).trim(), person, file, caption: unquote_(r[4]), year: String(r[5]).trim(), by: unquote_(r[6]), main: yes_(r[8]) });
+  });
+  return out;
+}
+
+function addPhoto_(b) {
+  const personId = String(b.personId || '').trim().toUpperCase();
+  const who = personName_(personId);
+  if (!who) return { error: 'That person is not in the family database.' };
+
+  const mime = String(b.mime || '');
+  if (!/^image\/(jpeg|png)$/.test(mime)) return { error: 'Only JPEG or PNG pictures can be added.' };
+  let bytes;
+  try { bytes = Utilities.base64Decode(String(b.data || '')); } catch (err) { return { error: 'That picture could not be read.' }; }
+  if (!bytes.length || bytes.length > MAX_PHOTO_BYTES) return { error: 'That picture is too large.' };
+  const u = i => bytes[i] & 0xff;
+  const isJpeg = u(0) === 0xff && u(1) === 0xd8, isPng = u(0) === 0x89 && u(1) === 0x50 && u(2) === 0x4e && u(3) === 0x47;
+  if (!(mime === 'image/jpeg' ? isJpeg : isPng)) return { error: 'That file is not a picture.' };
+  if (!underPhotoCap_()) return { error: 'The daily limit for new photos has been reached. Try again tomorrow.' };
+
+  const caption = clean_(b.caption, 300), by = clean_(b.addedBy, 60);
+  const year = /^\d{4}$/.test(String(b.year || '').trim()) ? String(b.year).trim() : '';
+  const stamp = Utilities.formatDate(new Date(), 'UTC', 'yyyyMMdd-HHmmss');
+  const blob = Utilities.newBlob(bytes, mime, `${personId} ${who} ${stamp}.${mime === 'image/png' ? 'png' : 'jpg'}`);
+  const file = photoFolder_().createFile(blob);
+  file.setDescription([who + ' (' + personId + ')', caption, year, by && 'Added by ' + by].filter(Boolean).join(' · '));
+  try { file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW); } catch (err) { console.warn('Could not share file: ' + err); }
+
+  const id = 'PH' + Utilities.getUuid().replace(/-/g, '').slice(0, 8).toUpperCase();
+  const lock = LockService.getScriptLock();
+  lock.waitLock(20000);
+  let main;
+  try {
+    const sh = photosSheet_();
+    main = !photoRows_(sh).some(r => r.person === personId && !r.hidden);   // the first photo becomes the portrait
+    sh.appendRow([id, personId, safe_(who), file.getId(), safe_(caption), year, safe_(by), new Date(), main ? 'Yes' : '', '']);
+  } finally { lock.releaseLock(); }
+  return { ok: true, photo: { id, person: personId, file: file.getId(), caption, year, by, main } };
+}
+
+/* hide a photo, choose the portrait, or change a caption */
+function markPhoto_(photoId, what, b) {
+  const lock = LockService.getScriptLock();
+  lock.waitLock(20000);
+  try {
+    const sh = photosSheet_(), rows = photoRows_(sh);
+    const hit = rows.find(r => r.id === String(photoId || '').trim());
+    if (!hit) return { error: 'That photo could not be found.' };
+    if (what === 'hide') {
+      sh.getRange(hit.row, 10).setValue('Yes');
+      if (hit.main) {   // pass the portrait on to the next photo of the same person
+        sh.getRange(hit.row, 9).setValue('');
+        const next = rows.find(r => r.person === hit.person && !r.hidden && r.id !== hit.id);
+        if (next) sh.getRange(next.row, 9).setValue('Yes');
+      }
+    } else if (what === 'main') {
+      rows.filter(r => r.person === hit.person).forEach(r => sh.getRange(r.row, 9).setValue(r.id === hit.id ? 'Yes' : ''));
+    } else if (what === 'caption') {
+      sh.getRange(hit.row, 5).setValue(safe_(clean_(b.caption, 300)));
+      sh.getRange(hit.row, 6).setValue(/^\d{4}$/.test(String(b.year || '').trim()) ? String(b.year).trim() : '');
+    }
+    return { ok: true };
+  } finally { lock.releaseLock(); }
+}
+
+function photosSheet_() {
+  const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+  let sh = ss.getSheetByName(PHOTOS_TAB);
+  if (!sh) {
+    sh = ss.insertSheet(PHOTOS_TAB);
+    sh.getRange(1, 1, 1, PHOTO_HEADERS.length).setValues([PHOTO_HEADERS]).setFontWeight('bold');
+    sh.setFrozenRows(1);
+    sh.setColumnWidth(3, 200); sh.setColumnWidth(4, 120); sh.setColumnWidth(5, 380);
+    sh.getRange('E:E').setWrap(true);
+  }
+  return sh;
+}
+
+function photoRows_(sh) {
+  const n = sh.getLastRow();
+  if (n < 2) return [];
+  return sh.getRange(2, 1, n - 1, PHOTO_HEADERS.length).getDisplayValues().map((r, i) => ({
+    row: i + 2, id: String(r[0]).trim(), person: String(r[1]).trim().toUpperCase(), main: yes_(r[8]), hidden: yes_(r[9])
+  }));
+}
+
+function photoFolder_() {
+  const props = PropertiesService.getScriptProperties();
+  const saved = props.getProperty('PHOTO_FOLDER_ID');
+  if (saved) { try { const f = DriveApp.getFolderById(saved); if (!f.isTrashed()) return f; } catch (err) { /* make a new one below */ } }
+  const folder = DriveApp.createFolder(PHOTO_FOLDER_NAME);
+  try { folder.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW); } catch (err) { console.warn('Could not share folder: ' + err); }
+  props.setProperty('PHOTO_FOLDER_ID', folder.getId());
+  return folder;
+}
+
+// Returns the person's name if the ID is in the Master Database, otherwise ''.
+function personName_(personId) {
+  if (!PERSON_ID.test(personId)) return '';
+  const values = SpreadsheetApp.openById(SPREADSHEET_ID).getSheetByName(DB_TAB).getDataRange().getDisplayValues();
+  const head = values[0].map(h => String(h).toLowerCase().replace(/[^a-z0-9]/g, ''));
+  const col = names => names.map(n => head.indexOf(n)).find(i => i >= 0);
+  let idCol = col(['personid', 'id']);
+  if (idCol === undefined) {   // header renamed: find the column that looks like P001, P002...
+    let best = 0;
+    values[0].forEach((_, c) => { const n = values.slice(1).filter(r => PERSON_ID.test(String(r[c]).trim())).length; if (n > best) { best = n; idCol = c; } });
+  }
+  if (idCol === undefined) return '';
+  const row = values.slice(1).find(r => String(r[idCol]).trim().toUpperCase() === personId);
+  if (!row) return '';
+  const full = col(['fullname']), first = col(['firstname']), last = col(['lastname']);
+  const name = (full !== undefined && String(row[full]).trim()) || [first, last].filter(c => c !== undefined).map(c => String(row[c]).trim()).filter(Boolean).join(' ');
+  return (name || personId).replace(/[\\/:*?"<>|]/g, ' ').slice(0, 80);
+}
+
+// '' when the passcode is right; otherwise the message to show. Too many wrong guesses lock uploads for the day.
+function checkPasscode_(given) {
+  const real = prop_('FAMILY_PASSCODE');
+  if (!real) return 'Photo uploads are not switched on yet.';
+  const props = PropertiesService.getScriptProperties();
+  const today = Utilities.formatDate(new Date(), 'UTC', 'yyyy-MM-dd');
+  const fails = props.getProperty('failDay') === today ? parseInt(props.getProperty('failCount'), 10) || 0 : 0;
+  if (fails >= 25) return 'Too many wrong passcodes today. Try again tomorrow.';
+  const tidy = s => String(s || '').trim().toLowerCase().replace(/\s+/g, ' ');
+  if (tidy(given) && tidy(given) === tidy(real)) return '';
+  props.setProperties({ failDay: today, failCount: String(fails + 1) });
+  return 'That passcode is not right.';
+}
+
+function underPhotoCap_() {
+  const props = PropertiesService.getScriptProperties();
+  const today = Utilities.formatDate(new Date(), 'UTC', 'yyyy-MM-dd');
+  const max = parseInt(props.getProperty('MAX_PHOTOS_PER_DAY'), 10) || 60;
+  const used = props.getProperty('photoDay') === today ? parseInt(props.getProperty('photoCount'), 10) || 0 : 0;
+  if (used >= max) return false;
+  props.setProperties({ photoDay: today, photoCount: String(used + 1) });
+  return true;
+}
+
+const yes_ = v => /^(y|yes|true|x)$/i.test(String(v || '').trim());
+const clean_ = (s, max) => String(s || '').replace(/[\u0000-\u001f]+/g, ' ').replace(/\s+/g, ' ').trim().slice(0, max);
+// Stops typed text from being treated as a spreadsheet formula.
+const safe_ = s => /^[=+\-@]/.test(s) ? "'" + s : s;
+const unquote_ = s => String(s || '').trim().replace(/^'/, '');
+
+/* ---------- run this once from the editor to switch photos on ---------- */
+// It makes the Photos tab and the Drive folder, and asks you for permission to use Google Drive.
+function setupPhotos() {
+  photosSheet_();
+  const folder = photoFolder_();
+  console.log('Photos tab is ready. Photos will be saved in: ' + folder.getUrl());
+  console.log(prop_('FAMILY_PASSCODE') ? 'A family passcode is set. Uploads are on.' : 'No FAMILY_PASSCODE yet. Add one in Project Settings -> Script properties to allow uploads.');
+}
 
 /* ---------- run this once from the editor to check everything works ---------- */
 function testOnce() {

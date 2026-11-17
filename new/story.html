@@ -105,6 +105,10 @@ button { font: inherit; color: inherit; }
 .slides::-webkit-scrollbar { display: none; }
 .slide { flex: 0 0 100%; scroll-snap-align: start; padding: 0 var(--gutter); min-width: 0; }
 .slide > .inner { max-width: var(--maxw); margin: 0 auto; }
+.story-photos { display: flex; flex-wrap: wrap; gap: 10px; margin: 18px 0 0; }
+.story-photos:empty { display: none; }
+.story-photos a { display: block; height: 96px; border-radius: 10px; overflow: hidden; box-shadow: 0 0 0 3px rgba(255,255,255,.85), 0 6px 18px rgba(0,0,0,.25); }
+.story-photos img { height: 100%; width: auto; max-width: 150px; object-fit: cover; display: block; }
 .hero .name { font-family: var(--display); font-weight: 500; font-size: clamp(56px, 12vw, 168px); line-height: .9; letter-spacing: -.03em; margin: 8px 0 0; text-wrap: balance; }
 .hero .name em { font-style: italic; font-weight: 400; }
 .hero .life { font-size: clamp(20px, 2.6vw, 28px); margin: 22px 0 0; max-width: 42ch; }
@@ -568,6 +572,7 @@ function storyPanel(p, gens) {
     <p class="kicker">${isViewer ? 'Your story' : rel ? esc(rel) : 'A story from the family'}</p>
     <h1 class="name">${esc(parts.join(' '))} <em>${esc(last)}</em></h1>
     <p class="life">${lifeSentence(p)}${parentsTxt ? ` Child of ${parentsTxt}.` : ''}${fam.length ? ' ' + fam.join(', ').replace(/^./, c => c.toUpperCase()) + '.' : ''}</p>
+    <div class="story-photos" id="story-photos"></div>
     ${p.reviewQuestions ? `<p class="note hero-note">The family is checking: ${esc(p.reviewQuestions.split('|')[0])}</p>` : ''}
     <div class="stats">
       <div><b>${gens.length - 1}</b><span>generations back</span></div>
@@ -932,7 +937,21 @@ function playReel(reel, photos) {
 }
 
 /* ---------- wiring ---------- */
+/* ---------- family photos (added from the Family Tree page; listed in the sheet's Photos tab) ---------- */
+let photoList = null;
+async function storyPhotos(p) {
+  if (!PLACE_ERA_URL) return;
+  try {
+    if (!photoList) { const d = await (await fetch(`${PLACE_ERA_URL}?action=photos`)).json(); photoList = d && Array.isArray(d.photos) ? d.photos.filter(ph => ph && /^[\w-]+$/.test(ph.file || '')) : []; }
+  } catch (e) { return; }
+  const box = document.getElementById('story-photos');
+  const mine = photoList.filter(ph => ph.person === p.id).sort((a, b) => (b.main ? 1 : 0) - (a.main ? 1 : 0)).slice(0, 5);
+  if (!box || !mine.length) return;
+  box.innerHTML = mine.map(ph => `<a href="tree.html#${esc(p.id)}" title="${esc(ph.caption || 'See all photos')}"><img src="https://lh3.googleusercontent.com/d/${ph.file}=w400" alt="${esc(ph.caption || 'Photo of ' + displayName(p))}" loading="lazy" onerror="if(!this.dataset.alt){this.dataset.alt=1;this.src='https://drive.google.com/thumbnail?id=${ph.file}&sz=w400'}"></a>`).join('');
+  dispatchEvent(new Event('resize'));   // the hero panel re-measures itself now that it is taller
+}
 function wire(p) {
+  storyPhotos(p);
   app.querySelectorAll('[data-go]').forEach(b => b.addEventListener('click', () => go(b.dataset.go)));
   // hero tabs <-> slides
   const slides = document.getElementById('slides'), tabs = [...app.querySelectorAll('.hero .tab')];

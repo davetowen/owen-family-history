@@ -37,3 +37,37 @@ Note: on the free tier, Google may use what is sent to improve its products. The
 - **Mark as checked:** type anything else in Reviewed, for example `OK – Dave`.
 - **Guard rails:** it only answers for towns that appear in the Master Database, and it stops after the daily limit.
 - **If you change the code later,** use **Deploy → Manage deployments → Edit → New version**, so the URL stays the same.
+
+---
+
+# Switching on family photos (about 5 minutes)
+
+The same script also lets family add photos to a person from the website. Photos are saved in a folder called **Owen Family Photos** in your Google Drive, and each one gets a row in a new **Photos** tab in the Owen Genealogy sheet. Anyone can see the photos on the website; only people who know the family passcode can add or change them.
+
+## 1. Replace the script
+1. Open the **Owen Genealogy** sheet, then **Extensions → Apps Script**.
+2. Select everything in `Code.gs`, delete it, and paste in the whole of the new `PlaceEra.gs`. Save.
+
+## 2. Choose a family passcode
+1. Gear icon (**Project Settings**) → **Script properties → Edit script properties → Add script property**.
+2. Property: `FAMILY_PASSCODE`  Value: a word or short phrase you will share with family. **Save**.
+   Capital letters don't matter. Until this is set, nobody can upload.
+
+## 3. Give permission for Google Drive
+1. Back in the editor, pick **setupPhotos** from the function dropdown and click **Run**.
+2. Google asks for permission again, this time for Drive (to save the photos). Approve it as before.
+3. The log shows the link to the new **Owen Family Photos** folder, and a **Photos** tab appears in the sheet.
+
+## 4. Publish the new version (keeps the same web address)
+1. **Deploy → Manage deployments**.
+2. Click the pencil (**Edit**), set **Version** to **New version**, and click **Deploy**.
+   Do not create a "New deployment": that would change the address the website uses.
+
+That's it. On the website, open anyone in the Family Tree: there is now a **Photos** section with **Add a photo**.
+
+## Looking after the photos
+- **In the sheet's Photos tab:** edit a caption or year; type `Yes` in **Main** to choose the portrait; type `Yes` in **Hide** to take a photo off the website.
+- **On the website:** click a photo to make it the main portrait, edit its caption, or remove it (asks for the passcode once per device).
+- **Removed photos are never deleted.** They stay in the Drive folder; clear the **Hide** cell to bring one back.
+- **Change the passcode** any time in Script properties. Devices that saved the old one will be asked again.
+- **Guard rails:** only JPEG/PNG pictures, only for people in the Master Database, at most 60 new photos a day (`MAX_PHOTOS_PER_DAY`), and 25 wrong passcodes lock uploads until the next day. The website does not offer uploads for living children under 18.
